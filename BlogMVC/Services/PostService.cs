@@ -9,9 +9,9 @@ public interface IPostService
     Post GetPost(int id);
 }
 
-public class PostService : IPostService
+public class PostService(IPostMarkdownReaderService postMarkdownReaderService) : IPostService
 {
-    private readonly List<Post> _posts = Post.AllPosts();
+    private readonly List<Post> _posts = postMarkdownReaderService.GetAllPostsFromMarkdown();
 
     public List<Post> GetPosts()
     {
@@ -20,8 +20,8 @@ public class PostService : IPostService
 
     public Post GetPost(int id)
     {
-        Debug.Assert(id >= 0);
+        Debug.Assert(id >= 1);
         Debug.Assert(id <= _posts.Count);
-        return _posts[id];
+        return _posts[id-1];
     }
 }

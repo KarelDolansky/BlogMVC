@@ -2,6 +2,8 @@ using BlogMVC.Data;
 using BlogMVC.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -17,6 +19,12 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.Requ
 builder.Services.AddControllersWithViews();
 
 builder.Services.AddSingleton<IPostService, PostService>();
+builder.Services.AddSingleton<IPostMarkdownReaderService, PostMarkdownReaderService>();
+
+builder.Services.AddSingleton<IDeserializer>(new DeserializerBuilder()
+    .WithNamingConvention(CamelCaseNamingConvention.Instance)
+    .IgnoreUnmatchedProperties()
+    .Build());
 
 var app = builder.Build();
 
