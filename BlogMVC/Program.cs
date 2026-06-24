@@ -1,6 +1,7 @@
+using BlogMVC.Data;
+using BlogMVC.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using BlogMVC.Data;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +15,8 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
+
+builder.Services.AddSingleton<IPostService, PostService>();
 
 var app = builder.Build();
 
@@ -37,8 +40,8 @@ app.UseAuthorization();
 app.MapStaticAssets();
 
 app.MapControllerRoute(
-        name: "default",
-        pattern: "{controller=Home}/{action=Index}/{id?}")
+        "default",
+        "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
 app.MapRazorPages()

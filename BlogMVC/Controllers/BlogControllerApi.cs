@@ -1,18 +1,22 @@
-using System.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
 using BlogMVC.Models;
-namespace BlogMVC.Controllers;
+using BlogMVC.Services;
+using Microsoft.AspNetCore.Mvc;
 
+namespace BlogMVC.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class BlogController : ControllerBase
+public class BlogControllerApi(IPostService postService) : ControllerBase
 {
-    private List<Post> posts = Post.AllPosts();
-    
-    [HttpGet("/Blog")]
+    [HttpGet]
     public ActionResult<List<Post>> Index()
     {
-        return posts;
+        return postService.GetPosts();
+    }
+
+    [HttpGet("{id}")]
+    public ActionResult<Post> GetPost(int id)
+    {
+        return postService.GetPost(id);
     }
 }
