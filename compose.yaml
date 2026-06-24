@@ -1,0 +1,7 @@
+﻿services:
+  blogmvc:
+    image: blogmvc
+    build:
+      context: .
+      dockerfile: BlogMVC/Dockerfile
+
