@@ -1,5 +1,4 @@
 namespace BlogMVC.Models;
-using YamlDotNet.Serialization;
 
 public class MarkdownMetadata
 {

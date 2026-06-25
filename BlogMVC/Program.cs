@@ -21,7 +21,7 @@ builder.Services.AddControllersWithViews();
 builder.Services.AddSingleton<IPostService, PostService>();
 builder.Services.AddSingleton<IPostMarkdownReaderService, PostMarkdownReaderService>();
 
-builder.Services.AddSingleton<IDeserializer>(new DeserializerBuilder()
+builder.Services.AddSingleton(new DeserializerBuilder()
     .WithNamingConvention(CamelCaseNamingConvention.Instance)
     .IgnoreUnmatchedProperties()
     .Build());
