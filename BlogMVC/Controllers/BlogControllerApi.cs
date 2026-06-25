@@ -1,6 +1,7 @@
 using BlogMVC.Models;
 using BlogMVC.Services;
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Bson;
 
 namespace BlogMVC.Controllers;
 
@@ -9,42 +10,55 @@ namespace BlogMVC.Controllers;
 public class BlogControllerApi(IPostService postService) : ControllerBase
 {
     [HttpGet]
-    public ActionResult<List<Post>> GetPosts()
+    public async Task<ActionResult<List<Post>>> GetPosts()
     {
-        return Ok(postService.GetPosts());
+        return Ok(await postService.GetPostsAsync());
     }
 
     [HttpGet("{id}", Name = "GetPost")]
-    public ActionResult<Post> GetPost(int id)
+    public async Task<ActionResult<Post>> GetPost(string id)
     {
-        var post = postService.GetPost(id);
-
+        if (!IsValidObjectId(id)) return BadRequest("Invalid post ID.");
+        var post = await postService.GetPostAsync(id);
         if (post == null) return NotFound();
-
         return Ok(post);
     }
 
     [HttpPost]
-    public ActionResult<Post> CreatePost(Post post)
+    public async Task<ActionResult<Post>> CreatePost(Post post)
     {
-        if (!postService.AddPost(post)) return BadRequest("Post with same id already exists.");
+        post.Id = null;
 
-        return CreatedAtRoute("GetPost", new { id = post.Id }, post);
+        var created = await postService.AddPostAsync(post);
+        return CreatedAtRoute("GetPost", new { id = created.Id }, created);
     }
 
     [HttpPut("{id}")]
-    public ActionResult EditPost(int id, Post post)
+    public async Task<ActionResult> EditPost(string id, Post post)
     {
+        if (!IsValidObjectId(id)) return BadRequest("Invalid post ID.");
         if (id != post.Id) return BadRequest("ID in URL does not match ID in body.");
-
-        if (!postService.EditPost(id, post)) return NotFound("Post not found.");
+        if (!await postService.EditPostAsync(id, post)) return NotFound("Post not found.");
         return NoContent();
     }
 
     [HttpDelete("{id}")]
-    public ActionResult DeletePost(int id)
+    public async Task<ActionResult> DeletePost(string id)
     {
-        if (!postService.DeletePost(id)) return NotFound("Post not found.");
+        if (!IsValidObjectId(id)) return BadRequest("Invalid post ID.");
+        if (!await postService.DeletePostAsync(id)) return NotFound("Post not found.");
         return NoContent();
+    }
+
+    [HttpGet("markdown")]
+    public async Task<ActionResult> AddPostFromMarkDown()
+    {
+        await postService.AddPostFromMarkDownAsync();
+        return Ok();
+    }
+
+    private static bool IsValidObjectId(string id)
+    {
+        return ObjectId.TryParse(id, out _);
     }
 }

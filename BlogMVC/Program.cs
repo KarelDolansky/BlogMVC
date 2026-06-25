@@ -1,4 +1,5 @@
 using BlogMVC.Data;
+using BlogMVC.Models;
 using BlogMVC.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,11 @@ builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.Requ
     .AddEntityFrameworkStores<ApplicationDbContext>();
 builder.Services.AddControllersWithViews();
 
+// MongoDB
+builder.Services.Configure<MongoDbSettings>(
+    builder.Configuration.GetSection("MongoDb"));
 builder.Services.AddSingleton<IPostService, PostService>();
+
 builder.Services.AddSingleton<IPostMarkdownReaderService, PostMarkdownReaderService>();
 
 builder.Services.AddSingleton(new DeserializerBuilder()

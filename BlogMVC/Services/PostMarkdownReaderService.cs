@@ -15,7 +15,7 @@ public class PostMarkdownReaderService(IDeserializer deserializerBuilder) : IPos
     public List<Post> GetAllPostsFromMarkdown()
     {
         var posts = new List<Post>();
-        var idCounter = 1;
+        //var idCounter = 1;
 
         foreach (var filePath in Directory.EnumerateFiles(_folderPath, "*.md"))
         {
@@ -37,13 +37,12 @@ public class PostMarkdownReaderService(IDeserializer deserializerBuilder) : IPos
 
                     var post = new Post
                     {
-                        Id = idCounter++,
+                        //Id = (idCounter++).ToString(),
                         Title = metadata.Title ?? "No Title",
                         Content = content,
                         Author = metadata.Author ?? "Unknown Author",
                         PublishDate = metadata.PublishDate ?? DateTime.MinValue
                     };
-
                     posts.Add(post);
                 }
             }
