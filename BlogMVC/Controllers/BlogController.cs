@@ -7,7 +7,7 @@ namespace BlogMVC.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class BlogControllerApi(IPostService postService) : ControllerBase
+public class BlogController(IPostService postService) : ControllerBase
 {
     [HttpGet]
     public async Task<ActionResult<List<Post>>> GetPosts()
