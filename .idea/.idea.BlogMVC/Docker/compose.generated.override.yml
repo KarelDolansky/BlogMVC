@@ -8,15 +8,14 @@ services:
     command: []
     entrypoint:
     - "dotnet"
-    - "/app/bin/Debug/net10.0/BlogMVC.dll"
+    - "/app-1/bin/Debug/net10.0/BlogMVC.dll"
     environment:
-      ASPNETCORE_ENVIRONMENT: "Development"
-      ASPNETCORE_STATICWEBASSETS: "/app/bin/Debug/net10.0/BlogMVC.staticwebassets.runtime.CT.json"
+      ASPNETCORE_STATICWEBASSETS: "/app-1/bin/Debug/net10.0/BlogMVC.staticwebassets.runtime.CT.json"
       DOTNET_USE_POLLING_FILE_WATCHER: "true"
     image: "blogmvc:dev"
     ports: []
     volumes:
-    - "/home/karel/RiderProjects/BlogMVC/BlogMVC:/app:rw"
+    - "/home/karel/RiderProjects/BlogMVC/BlogMVC:/app-1:rw"
     - "/home/karel/RiderProjects/BlogMVC:/src:rw"
     - "/home/karel/.nuget/packages:/home/app/.nuget/packages"
-    working_dir: "/app"
+    working_dir: "/app-1"

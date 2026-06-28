@@ -15,40 +15,44 @@ public class PostMarkdownReaderService(IDeserializer deserializerBuilder) : IPos
     public List<Post> GetAllPostsFromMarkdown()
     {
         var posts = new List<Post>();
-        var idCounter = 1;
 
         foreach (var filePath in Directory.EnumerateFiles(_folderPath, "*.md"))
         {
             var fileContent = File.ReadAllText(filePath);
-
-            if (fileContent.StartsWith("---\n") || fileContent.StartsWith("---\r\n"))
-            {
-                var endOfFrontMatter = fileContent.IndexOf("---", 3, StringComparison.Ordinal);
-
-                if (endOfFrontMatter != -1)
-                {
-                    var yaml = fileContent.Substring(3, endOfFrontMatter - 3).Trim();
-                    var content = fileContent.Substring(endOfFrontMatter + 3).Trim();
-
-                    var metadata = deserializerBuilder.Deserialize<MarkdownMetadata>(yaml);
-
-                    if (metadata.Draft)
-                        continue;
-
-                    var post = new Post
-                    {
-                        Id = idCounter++,
-                        Title = metadata.Title ?? "No Title",
-                        Content = content,
-                        Author = metadata.Author ?? "Unknown Author",
-                        PublishDate = metadata.PublishDate ?? DateTime.MinValue
-                    };
-
-                    posts.Add(post);
-                }
-            }
+            var post = StringToPost(fileContent);
+            if (post != null) posts.Add(post);
         }
 
         return posts;
+    }
+
+    private Post? StringToPost(string content)
+    {
+        if (content.StartsWith("---\n") || content.StartsWith("---\r\n"))
+        {
+            var endOfFrontMatter = content.IndexOf("---", 3, StringComparison.Ordinal);
+
+            if (endOfFrontMatter != -1)
+            {
+                var yaml = content.Substring(3, endOfFrontMatter - 3).Trim();
+                var postContent = content.Substring(endOfFrontMatter + 3).Trim();
+
+                var metadata = deserializerBuilder.Deserialize<MarkdownMetadata>(yaml);
+
+                if (metadata.Draft)
+                    return null;
+
+                var post = new Post
+                {
+                    Title = metadata.Title ?? "No Title",
+                    Content = postContent,
+                    Author = metadata.Author ?? "Unknown Author",
+                    PublishDate = metadata.PublishDate ?? DateTime.MinValue
+                };
+                return post;
+            }
+        }
+
+        return null;
     }
 }
