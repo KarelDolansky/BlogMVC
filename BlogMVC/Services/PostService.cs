@@ -8,17 +8,15 @@ public interface IPostService
 {
     Task<List<Post>> GetPostsAsync();
     Task<Post?> GetPostAsync(string id);
-    Task<Post> AddPostAsync(Post post);
+    Task<Post> AddPostAsync(CreatePostDto createPostDto);
     Task<bool> DeletePostAsync(string id);
     Task<bool> EditPostAsync(string id, Post post);
 
-    Task<List<Post>> AddBulkPostAsync(List<Post> posts);
-    //Task AddPostFromMarkDownAsync();
+    Task<List<Post>> AddBulkPostAsync(List<CreatePostDto> createPostDtoes);
 }
 
 public class PostService : IPostService
 {
-    //private readonly IPostMarkdownReaderService _postMarkdownReaderService;
     private readonly IMongoCollection<Post> _posts;
 
     public PostService(IOptions<MongoDbSettings> settings, MongoClient client)
@@ -37,22 +35,36 @@ public class PostService : IPostService
         return await _posts.Find(p => p.Id == id).FirstOrDefaultAsync();
     }
 
-    public async Task<Post> AddPostAsync(Post post)
+    public async Task<Post> AddPostAsync(CreatePostDto createPostDto)
     {
-        post.Id = null;
-        post.PublishDate ??= DateTime.UtcNow;
-        post.ModifiedDate = post.PublishDate;
+        var date = DateTime.UtcNow;
+        var post = new Post
+        {
+            Title = createPostDto.Title,
+            Content = createPostDto.Content,
+            Author = "AuthorDefault", //TODO: automate creating author;
+            PublishDate = date,
+            ModifiedDate = date
+        };
         await _posts.InsertOneAsync(post);
         return post;
     }
 
-    public async Task<List<Post>> AddBulkPostAsync(List<Post> posts)
+    public async Task<List<Post>> AddBulkPostAsync(List<CreatePostDto> createPostDtoes)
     {
-        foreach (var post in posts)
+        var posts = new List<Post>();
+        foreach (var createPostDto in createPostDtoes)
         {
-            post.Id = null;
-            post.PublishDate ??= DateTime.UtcNow;
-            post.ModifiedDate = post.PublishDate;
+            var date = DateTime.UtcNow;
+            var post = new Post
+            {
+                Title = createPostDto.Title,
+                Content = createPostDto.Content,
+                Author = "AuthorDefault", //TODO: automate creating author;
+                PublishDate = date,
+                ModifiedDate = date
+            };
+            posts.Add(post);
         }
 
         await _posts.InsertManyAsync(posts);
@@ -71,11 +83,4 @@ public class PostService : IPostService
         var result = await _posts.ReplaceOneAsync(p => p.Id == id, post);
         return result.ModifiedCount > 0;
     }
-
-
-    //public async Task AddPostFromMarkDownAsync()
-    //{
-    //    var posts = _postMarkdownReaderService.GetAllPostsFromMarkdown();
-    //    foreach (var post in posts) await AddPostAsync(post);
-    //}
 }

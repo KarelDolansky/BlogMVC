@@ -25,16 +25,16 @@ public class BlogController(IPostService postService) : ControllerBase
     }
 
     [HttpPost]
-    public async Task<ActionResult<Post>> CreatePost(Post post)
+    public async Task<ActionResult<Post>> CreatePost(CreatePostDto createPostDto)
     {
-        var created = await postService.AddPostAsync(post);
+        var created = await postService.AddPostAsync(createPostDto);
         return CreatedAtRoute("GetPost", new { id = created.Id }, created);
     }
 
     [HttpPost("bulk")]
-    public async Task<ActionResult<IEnumerable<Post>>> BulkCreatePosts(List<Post> posts)
+    public async Task<ActionResult<IEnumerable<Post>>> BulkCreatePosts(List<CreatePostDto> createPostDtoes)
     {
-        var created = await postService.AddBulkPostAsync(posts);
+        var created = await postService.AddBulkPostAsync(createPostDtoes);
         return StatusCode(StatusCodes.Status201Created, created);
     }
 
@@ -54,13 +54,6 @@ public class BlogController(IPostService postService) : ControllerBase
         if (!await postService.DeletePostAsync(id)) return NotFound("Post not found.");
         return NoContent();
     }
-    
-    //[HttpGet("markdown")]
-    //public async Task<ActionResult> AddPostFromMarkDown()
-    //{
-    //    await postService.AddPostFromMarkDownAsync();
-    //    return Ok();
-    //}
 
     private static bool IsValidObjectId(string id)
     {
