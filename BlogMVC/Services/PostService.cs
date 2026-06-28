@@ -11,9 +11,9 @@ public interface IPostService
     Task<Post> AddPostAsync(Post post);
     Task<bool> DeletePostAsync(string id);
     Task<bool> EditPostAsync(string id, Post post);
+
     Task<List<Post>> AddBulkPostAsync(List<Post> posts);
     //Task AddPostFromMarkDownAsync();
-
 }
 
 public class PostService : IPostService
@@ -29,7 +29,7 @@ public class PostService : IPostService
 
     public async Task<List<Post>> GetPostsAsync()
     {
-        return await _posts.Find(_ => true).ToListAsync();
+        return await _posts.Find(_ => true).SortByDescending(x => x.PublishDate).ToListAsync();
     }
 
     public async Task<Post?> GetPostAsync(string id)
@@ -54,7 +54,7 @@ public class PostService : IPostService
             post.PublishDate ??= DateTime.UtcNow;
             post.ModifiedDate = post.PublishDate;
         }
-    
+
         await _posts.InsertManyAsync(posts);
         return posts;
     }
@@ -71,7 +71,7 @@ public class PostService : IPostService
         var result = await _posts.ReplaceOneAsync(p => p.Id == id, post);
         return result.ModifiedCount > 0;
     }
-    
+
 
     //public async Task AddPostFromMarkDownAsync()
     //{
