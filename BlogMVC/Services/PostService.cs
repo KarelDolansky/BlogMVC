@@ -11,20 +11,20 @@ public interface IPostService
     Task<Post> AddPostAsync(Post post);
     Task<bool> DeletePostAsync(string id);
     Task<bool> EditPostAsync(string id, Post post);
-    Task AddPostFromMarkDownAsync();
+    Task<List<Post>> AddBulkPostAsync(List<Post> posts);
+    //Task AddPostFromMarkDownAsync();
+
 }
 
 public class PostService : IPostService
 {
-    private readonly IPostMarkdownReaderService _postMarkdownReaderService;
+    //private readonly IPostMarkdownReaderService _postMarkdownReaderService;
     private readonly IMongoCollection<Post> _posts;
 
-    public PostService(IOptions<MongoDbSettings> settings, IPostMarkdownReaderService markdownReaderService)
+    public PostService(IOptions<MongoDbSettings> settings, MongoClient client)
     {
-        var client = new MongoClient(settings.Value.ConnectionString);
         var database = client.GetDatabase(settings.Value.DatabaseName);
         _posts = database.GetCollection<Post>(settings.Value.PostsCollectionName);
-        _postMarkdownReaderService = markdownReaderService;
     }
 
     public async Task<List<Post>> GetPostsAsync()
@@ -39,9 +39,24 @@ public class PostService : IPostService
 
     public async Task<Post> AddPostAsync(Post post)
     {
+        post.Id = null;
         post.PublishDate ??= DateTime.UtcNow;
+        post.ModifiedDate = post.PublishDate;
         await _posts.InsertOneAsync(post);
         return post;
+    }
+
+    public async Task<List<Post>> AddBulkPostAsync(List<Post> posts)
+    {
+        foreach (var post in posts)
+        {
+            post.Id = null;
+            post.PublishDate ??= DateTime.UtcNow;
+            post.ModifiedDate = post.PublishDate;
+        }
+    
+        await _posts.InsertManyAsync(posts);
+        return posts;
     }
 
     public async Task<bool> DeletePostAsync(string id)
@@ -56,10 +71,11 @@ public class PostService : IPostService
         var result = await _posts.ReplaceOneAsync(p => p.Id == id, post);
         return result.ModifiedCount > 0;
     }
+    
 
-    public async Task AddPostFromMarkDownAsync()
-    {
-        var posts = _postMarkdownReaderService.GetAllPostsFromMarkdown();
-        foreach (var post in posts) await AddPostAsync(post);
-    }
+    //public async Task AddPostFromMarkDownAsync()
+    //{
+    //    var posts = _postMarkdownReaderService.GetAllPostsFromMarkdown();
+    //    foreach (var post in posts) await AddPostAsync(post);
+    //}
 }

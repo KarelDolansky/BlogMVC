@@ -3,6 +3,7 @@ using BlogMVC.Models;
 using BlogMVC.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using MongoDB.Driver;
 using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 
@@ -22,8 +23,11 @@ builder.Services.AddControllersWithViews();
 // MongoDB
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDb"));
-builder.Services.AddSingleton<IPostService, PostService>();
+var connectionStringMongoDb = builder.Configuration.GetSection("MongoDb").GetSection("ConnectionString").Value;
+builder.Services.AddSingleton(new MongoClient(connectionStringMongoDb));
 
+//Services
+builder.Services.AddSingleton<IPostService, PostService>();
 builder.Services.AddSingleton<IPostMarkdownReaderService, PostMarkdownReaderService>();
 
 builder.Services.AddSingleton(new DeserializerBuilder()
