@@ -10,7 +10,7 @@ namespace BlogMVC.Controllers;
 public class BlogController(IPostService postService) : ControllerBase
 {
     [HttpGet]
-    public async Task<ActionResult<List<Post>>> GetPosts()
+    public async Task<ActionResult<IReadOnlyList<Post>>> GetPosts()
     {
         return Ok(await postService.GetPostsAsync());
     }
@@ -32,7 +32,7 @@ public class BlogController(IPostService postService) : ControllerBase
     }
 
     [HttpPost("bulk")]
-    public async Task<ActionResult<IEnumerable<Post>>> BulkCreatePosts(List<CreatePostDto> createPostDtoes)
+    public async Task<ActionResult<IReadOnlyList<Post>>> BulkCreatePosts(List<CreatePostDto> createPostDtoes)
     {
         var created = await postService.AddBulkPostAsync(createPostDtoes);
         return StatusCode(StatusCodes.Status201Created, created);

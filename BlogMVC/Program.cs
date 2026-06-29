@@ -1,4 +1,7 @@
 using BlogMVC.Data;
+using BlogMVC.Infrastructure.Interfaces;
+using BlogMVC.Infrastructure.Providers;
+using BlogMVC.Infrastructure.Repositories;
 using BlogMVC.Models;
 using BlogMVC.Services;
 using Microsoft.AspNetCore.Identity;
@@ -29,6 +32,8 @@ builder.Services.AddSingleton(new MongoClient(connectionStringMongoDb));
 //Services
 builder.Services.AddSingleton<IPostService, PostService>();
 builder.Services.AddSingleton<IPostMarkdownReaderService, PostMarkdownReaderService>();
+builder.Services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+builder.Services.AddSingleton<IPostRepository, PostRepository>();
 
 builder.Services.AddSingleton(new DeserializerBuilder()
     .WithNamingConvention(CamelCaseNamingConvention.Instance)
