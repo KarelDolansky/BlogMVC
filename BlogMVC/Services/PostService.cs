@@ -54,8 +54,12 @@ public class PostService(IDateTimeProvider dateTimeProvider, IPostRepository pos
         return await postRepository.DeleteOneAsync(id);
     }
 
-    public async Task<bool> EditPostAsync(string id, Post post)
+    public async Task<bool> EditPostAsync(string id, EditPostDto editPostDto)
     {
+        var post = await postRepository.FindAsync(id);
+        if (post == null) return false;
+        post.Title = editPostDto.Title;
+        post.Content = editPostDto.Content;
         post.ModifiedDate = dateTimeProvider.Now;
         return await postRepository.ReplaceOneAsync(id, post);
     }

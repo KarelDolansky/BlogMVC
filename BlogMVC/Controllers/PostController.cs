@@ -25,4 +25,26 @@ public class PostController(IPostService postService) : Controller
         var createdPost = await postService.AddPostAsync(createPostDto);
         return RedirectToAction("details", new { id = createdPost.Id });
     }
+
+    public async Task<IActionResult> Edit(string id)
+    {
+        var post = await postService.GetPostAsync(id);
+        if (post == null) return NotFound();
+        var editPostDto = new EditPostDto
+        {
+            Title = post.Title,
+            Content = post.Content
+        };
+        return View(editPostDto);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Edit(string id, EditPostDto editPostDto)
+    {
+        if (!ModelState.IsValid) return View(editPostDto);
+
+        var result = await postService.EditPostAsync(id, editPostDto);
+        if (!result) return View(editPostDto);
+        return RedirectToAction("details", new { id });
+    }
 }
