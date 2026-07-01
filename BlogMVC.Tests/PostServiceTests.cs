@@ -1,12 +1,14 @@
 ﻿using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Models;
 using BlogMVC.Services;
+using BlogMVC.Tests.Helpers;
 using Moq;
 
 namespace BlogMVC.Tests;
 
 public class PostServiceTests
 {
+    static readonly DateTime DefaultDate = new DateTime(2001, 1, 1);
     private readonly Mock<IDateTimeProvider> _dateTimeProviderMock;
     private readonly Mock<IPostRepository> _postRepositoryMock;
     private readonly PostService _postService;
@@ -24,20 +26,15 @@ public class PostServiceTests
     public async Task AddPostAsync_SetsPublishDate_FromDateTimeProvider()
     {
         // Arrange
-        var expectedDate = new DateTime(2001, 1, 1);
-        _dateTimeProviderMock.Setup(t => t.Now).Returns(expectedDate);
+        _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
 
-        var createPostDto = new CreatePostDto
-        {
-            Title = "Title",
-            Content = "Content",
-        };
+        var createPostDto = new CreatePostDtoFactory().Build();
         // Act
         await _postService.AddPostAsync(createPostDto);
 
         // Assert
         _postRepositoryMock.Verify(p => p.InsertOneAsync(It.Is<Post>(post =>
-            post.PublishDate == expectedDate
+            post.PublishDate == DefaultDate
         )), Times.Once);
     }
 
@@ -45,20 +42,15 @@ public class PostServiceTests
     public async Task AddPostAsync_SetsModifiedDate_FromDateTimeProvider()
     {
         // Arrange
-        var expectedDate = new DateTime(2001, 1, 1);
-        _dateTimeProviderMock.Setup(t => t.Now).Returns(expectedDate);
+        _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
 
-        var createPostDto = new CreatePostDto
-        {
-            Title = "Title",
-            Content = "Content",
-        };
+        var createPostDto = new CreatePostDtoFactory().Build();
         // Act
         await _postService.AddPostAsync(createPostDto);
 
         // Assert
         _postRepositoryMock.Verify(p => p.InsertOneAsync(It.Is<Post>(post =>
-            post.ModifiedDate == expectedDate
+            post.ModifiedDate == DefaultDate
         )), Times.Once);
     }
 
@@ -66,21 +58,20 @@ public class PostServiceTests
     public async Task AddPostAsync_MapsTitleAndContent_FromDto()
     {
         // Arrange
-        _dateTimeProviderMock.Setup(t => t.Now).Returns(new DateTime(2001, 1, 1));
+        _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
 
-        var createPostDto = new CreatePostDto
-        {
-            Title = "My Title",
-            Content = "My Content",
-        };
+        var createPostDto = new CreatePostDtoFactory()
+            .WithTitle("Title1")
+            .WithContent("Content1")
+            .Build();
 
         // Act
         await _postService.AddPostAsync(createPostDto);
 
         // Assert
         _postRepositoryMock.Verify(p => p.InsertOneAsync(It.Is<Post>(post =>
-            post.Title == "My Title" &&
-            post.Content == "My Content"
+            post.Title == "Title1" &&
+            post.Content == "Content1"
         )), Times.Once);
     }
 
@@ -88,20 +79,16 @@ public class PostServiceTests
     public async Task AddPostAsync_ReturnsPost_FromRepository()
     {
         // Arrange
-        _dateTimeProviderMock.Setup(t => t.Now).Returns(new DateTime(2001, 1, 1));
+        _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
 
-        var createPostDto = new CreatePostDto
-        {
-            Title = "Title",
-            Content = "Content",
-        };
-
-        var insertedPost = new Post
-        {
-            Title = "Title",
-            Content = "Content",
-            Author = "AuthorDefault",
-        };
+        var createPostDto = new CreatePostDtoFactory()
+            .WithTitle("Title")
+            .WithContent("Content")
+            .Build();
+        var insertedPost = new PostFactory()
+            .WithTitle("Title")
+            .WithContent("Content")
+            .Build();
 
         _postRepositoryMock
             .Setup(p => p.InsertOneAsync(It.IsAny<Post>()))
@@ -120,13 +107,12 @@ public class PostServiceTests
     public async Task AddBulkPostAsync_SetsPublishAndModifiedDate_ForAllPosts_FromDateTimeProvider()
     {
         // Arrange
-        var expectedDate = new DateTime(2001, 1, 1);
-        _dateTimeProviderMock.Setup(t => t.Now).Returns(expectedDate);
+        _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
 
         var createPostDtoes = new List<CreatePostDto>
         {
-            new() { Title = "Title1", Content = "Content1" },
-            new() { Title = "Title2", Content = "Content2" },
+            new CreatePostDtoFactory().WithTitle("Title1").WithContent("Content1").Build(),
+            new CreatePostDtoFactory().WithTitle("Title2").WithContent("Content2").Build(),
         };
 
         // Act
@@ -135,7 +121,7 @@ public class PostServiceTests
         // Assert
         _postRepositoryMock.Verify(p => p.InsertManyAsync(It.Is<List<Post>>(posts =>
             posts.Count == 2 &&
-            posts.All(post => post.PublishDate == expectedDate && post.ModifiedDate == expectedDate)
+            posts.All(post => post.PublishDate == DefaultDate && post.ModifiedDate == DefaultDate)
         )), Times.Once);
     }
 
@@ -143,12 +129,12 @@ public class PostServiceTests
     public async Task AddBulkPostAsync_MapsTitleAndContent_ForEachDto()
     {
         // Arrange
-        _dateTimeProviderMock.Setup(t => t.Now).Returns(new DateTime(2001, 1, 1));
+        _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
 
         var createPostDtoes = new List<CreatePostDto>
         {
-            new() { Title = "Title1", Content = "Content1" },
-            new() { Title = "Title2", Content = "Content2" },
+            new CreatePostDtoFactory().WithTitle("Title1").WithContent("Content1").Build(),
+            new CreatePostDtoFactory().WithTitle("Title2").WithContent("Content2").Build()
         };
 
         // Act
@@ -180,16 +166,16 @@ public class PostServiceTests
     public async Task AddBulkPostAsync_ReturnsPosts_FromRepository()
     {
         // Arrange
-        _dateTimeProviderMock.Setup(t => t.Now).Returns(new DateTime(2001, 1, 1));
+        _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
 
         var createPostDtoes = new List<CreatePostDto>
         {
-            new() { Title = "Title1", Content = "Content1" },
+            new CreatePostDtoFactory().WithTitle("Title1").WithContent("Content1").Build(),
         };
 
         var insertedPosts = new List<Post>
         {
-            new() { Title = "Title1", Content = "Content1", Author = "AuthorDefault" },
+            new PostFactory().WithTitle("Title1").WithContent("Content1").Build(),
         };
 
         _postRepositoryMock
@@ -211,8 +197,9 @@ public class PostServiceTests
         // Arrange
         var posts = new List<Post>
         {
-            new() { Title = "Title1", Content = "Content1", Author = "AuthorDefault" },
-            new() { Title = "Title2", Content = "Content2", Author = "AuthorDefault" },
+            new PostFactory().WithTitle("Title1").WithContent("Content1").Build(),
+            new PostFactory().WithTitle("Title2").WithContent("Content2").Build(),
+            new PostFactory().WithTitle("Title3").WithContent("Content3").Build(),
         };
         _postRepositoryMock.Setup(p => p.FindAllAsync()).ReturnsAsync(posts);
 
@@ -243,7 +230,8 @@ public class PostServiceTests
     public async Task GetPostAsync_WithExistingId_ReturnsPost_FromRepository()
     {
         // Arrange
-        var post = new Post { Title = "Title", Content = "Content", Author = "AuthorDefault" };
+        var post = new PostFactory()
+            .Build();
         _postRepositoryMock.Setup(p => p.FindAsync("1")).ReturnsAsync(post);
 
         // Act
@@ -302,24 +290,25 @@ public class PostServiceTests
     public async Task EditPostAsync_SetsModifiedDate_FromDateTimeProvider()
     {
         // Arrange
-        var expectedDate = new DateTime(2001, 1, 1);
-        _dateTimeProviderMock.Setup(t => t.Now).Returns(expectedDate);
+        _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
 
-        var post = new Post { Title = "Title", Content = "Content", Author = "AuthorDefault" };
+        var post = new PostFactory()
+            .Build();
 
         // Act
         await _postService.EditPostAsync("1", post);
 
         // Assert
-        Assert.Equal(expectedDate, post.ModifiedDate);
+        Assert.Equal(DefaultDate, post.ModifiedDate);
     }
 
     [Fact]
     public async Task EditPostAsync_CallsReplaceOneAsync_WithIdAndPost()
     {
         // Arrange
-        _dateTimeProviderMock.Setup(t => t.Now).Returns(new DateTime(2001, 1, 1));
-        var post = new Post { Title = "Title", Content = "Content", Author = "AuthorDefault" };
+        _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
+        var post = new PostFactory()
+            .Build();
 
         // Act
         await _postService.EditPostAsync("1", post);
@@ -332,9 +321,10 @@ public class PostServiceTests
     public async Task EditPostAsync_WithExistingId_ReturnsTrue()
     {
         // Arrange
-        _dateTimeProviderMock.Setup(t => t.Now).Returns(new DateTime(2001, 1, 1));
+        _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
         _postRepositoryMock.Setup(p => p.ReplaceOneAsync("1", It.IsAny<Post>())).ReturnsAsync(true);
-        var post = new Post { Title = "Title", Content = "Content", Author = "AuthorDefault" };
+        var post = new PostFactory()
+            .Build();
 
         // Act
         var result = await _postService.EditPostAsync("1", post);
@@ -347,9 +337,10 @@ public class PostServiceTests
     public async Task EditPostAsync_WithNonExistingId_ReturnsFalse()
     {
         // Arrange
-        _dateTimeProviderMock.Setup(t => t.Now).Returns(new DateTime(2001, 1, 1));
+        _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
         _postRepositoryMock.Setup(p => p.ReplaceOneAsync("missing", It.IsAny<Post>())).ReturnsAsync(false);
-        var post = new Post { Title = "Title", Content = "Content", Author = "AuthorDefault" };
+        var post = new PostFactory()
+            .Build();
 
         // Act
         var result = await _postService.EditPostAsync("missing", post);

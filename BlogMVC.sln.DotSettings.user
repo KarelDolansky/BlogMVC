@@ -3,9 +3,4 @@
   &lt;ProjectFile&gt;36C24296-9ECE-4CD1-89B2-98E0992A0D19/f:PostServiceTests.cs&lt;/ProjectFile&gt;
 &lt;/SessionState&gt;</s:String>
 	
-	<s:String x:Key="/Default/Environment/UnitTesting/UnitTestSessionStore/Sessions/=a85dfaad_002D8708_002D4551_002D9361_002Dac12cf3ba888/@EntryIndexedValue">&lt;SessionState ContinuousTestingMode="0" IsActive="True" Name="All tests from UnitTest1.cs" xmlns="urn:schemas-jetbrains-com:jetbrains-ut-session"&gt;
-  &lt;TestAncestor&gt;
-    &lt;TestId&gt;xUnit::36C24296-9ECE-4CD1-89B2-98E0992A0D19::net10.0::BlogMVC.Tests.PostServiceTests.AddPostAsync_SetsPublishDate_FromDateTimeProvider&lt;/TestId&gt;
-    &lt;TestId&gt;xUnit::36C24296-9ECE-4CD1-89B2-98E0992A0D19::net10.0::BlogMVC.Tests.PostServiceTests.AddPostAsync_SetsModifiedDate_FromDateTimeProvider&lt;/TestId&gt;
-  &lt;/TestAncestor&gt;
-&lt;/SessionState&gt;</s:String></wpf:ResourceDictionary>
+	</wpf:ResourceDictionary>
