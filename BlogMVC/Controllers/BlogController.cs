@@ -39,11 +39,10 @@ public class BlogController(IPostService postService) : ControllerBase
     }
 
     [HttpPut("{id}")]
-    public async Task<ActionResult> EditPost(string id, Post post)
+    public async Task<ActionResult> EditPost(string id, EditPostDto editPostDto)
     {
         if (!IsValidObjectId(id)) return BadRequest("Invalid post ID.");
-        if (id != post.Id) return BadRequest("ID in URL does not match ID in body.");
-        if (!await postService.EditPostAsync(id, post)) return NotFound("Post not found.");
+        if (!await postService.EditPostAsync(id, editPostDto)) return NotFound("Post not found.");
         return NoContent();
     }
 
