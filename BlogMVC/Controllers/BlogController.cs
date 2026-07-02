@@ -1,13 +1,12 @@
 using BlogMVC.Models;
 using BlogMVC.Services;
 using Microsoft.AspNetCore.Mvc;
-using MongoDB.Bson;
 
 namespace BlogMVC.Controllers;
 
 [Route("api/[controller]")]
 [ApiController]
-public class BlogController(IPostService postService) : ControllerBase
+public class BlogController(IPostService postService) : BaseApiController
 {
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<Post>>> GetPosts()
@@ -52,10 +51,5 @@ public class BlogController(IPostService postService) : ControllerBase
         if (!IsValidObjectId(id)) return BadRequest("Invalid post ID.");
         if (!await postService.DeletePostAsync(id)) return NotFound("Post not found.");
         return NoContent();
-    }
-
-    private static bool IsValidObjectId(string id)
-    {
-        return ObjectId.TryParse(id, out _);
     }
 }
