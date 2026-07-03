@@ -4,10 +4,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BlogMVC.Controllers;
 
-public class PostController(IPostService postService) : Controller
+public class PostController(IPostService postService) : BaseController
 {
     public async Task<IActionResult> Details(string id)
     {
+        if (!IsValidObjectId(id)) return NotFound();
         var post = await postService.GetPostAsync(id);
         if (post == null) return NotFound();
         return View(post);
@@ -28,6 +29,7 @@ public class PostController(IPostService postService) : Controller
 
     public async Task<IActionResult> Edit(string id)
     {
+        if (!IsValidObjectId(id)) return NotFound();
         var post = await postService.GetPostAsync(id);
         if (post == null) return NotFound();
         var editPostDto = new EditPostDto
@@ -41,6 +43,7 @@ public class PostController(IPostService postService) : Controller
     [HttpPost]
     public async Task<IActionResult> Edit(string id, EditPostDto editPostDto)
     {
+        if (!IsValidObjectId(id)) return NotFound();
         if (!ModelState.IsValid) return View(editPostDto);
 
         var result = await postService.EditPostAsync(id, editPostDto);

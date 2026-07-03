@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BlogMVC.Controllers;
 
-public class HomeController(IPostService postService) : Controller
+public class HomeController(IPostService postService) : BaseController
 {
     public async Task<IActionResult> Index()
     {
