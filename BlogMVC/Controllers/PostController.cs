@@ -50,4 +50,22 @@ public class PostController(IPostService postService) : BaseController
         if (!result) return View(editPostDto);
         return RedirectToAction("details", new { id });
     }
+
+    public async Task<IActionResult> Delete(string id)
+    {
+        if (!IsValidObjectId(id)) return NotFound();
+        var post = await postService.GetPostAsync(id);
+        if (post == null) return NotFound();
+        return View(post);
+    }
+
+    [HttpPost]
+    [ActionName("Delete")]
+    public async Task<IActionResult> DeletePost(string id)
+    {
+        if (!IsValidObjectId(id)) return NotFound();
+        var result = await postService.DeletePostAsync(id);
+        if (!result) return NotFound();
+        return RedirectToAction("Index", "Home");
+    }
 }
