@@ -1,0 +1,16 @@
+@model Post
+
+<div class="card mb-3">
+    <div class="card-body">
+        <h5 class="card-title">@Model.Title</h5>
+        <p class="card-text">Description</p> <!-- TODO: Description; -->
+        <p class="card-text"><small class="text-muted">Published: @Model.PublishDate.ToString("dd/MM/yyyy")</small></p>
+
+        @if (Model.ModifiedDate > Model.PublishDate)
+        {
+            <p class="card-text"><small class="text-muted">Updated: @Model.ModifiedDate.ToString("dd/MM/yyyy")</small>
+            </p>
+        }
+        <a class="btn btn-primary stretched-link" asp-controller="Post" asp-action="Details" asp-route-id="@Model.Id">Details</a>
+    </div>
+</div>

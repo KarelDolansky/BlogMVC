@@ -1,6 +1,14 @@
+using BlogMVC.Data;
+using BlogMVC.Infrastructure.Interfaces;
+using BlogMVC.Infrastructure.Providers;
+using BlogMVC.Infrastructure.Repositories;
+using BlogMVC.Models;
+using BlogMVC.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using BlogMVC.Data;
+using MongoDB.Driver;
+using YamlDotNet.Serialization;
+using YamlDotNet.Serialization.NamingConventions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +21,24 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>();
-builder.Services.AddControllersWithViews();
+builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();
+
+// MongoDB
+builder.Services.Configure<MongoDbSettings>(
+    builder.Configuration.GetSection("MongoDb"));
+var connectionStringMongoDb = builder.Configuration.GetSection("MongoDb").GetSection("ConnectionString").Value;
+builder.Services.AddSingleton(new MongoClient(connectionStringMongoDb));
+
+//Services
+builder.Services.AddSingleton<IPostService, PostService>();
+builder.Services.AddSingleton<IPostMarkdownReaderService, PostMarkdownReaderService>();
+builder.Services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
+builder.Services.AddSingleton<IPostRepository, PostRepository>();
+
+builder.Services.AddSingleton(new DeserializerBuilder()
+    .WithNamingConvention(CamelCaseNamingConvention.Instance)
+    .IgnoreUnmatchedProperties()
+    .Build());
 
 var app = builder.Build();
 
@@ -37,8 +62,8 @@ app.UseAuthorization();
 app.MapStaticAssets();
 
 app.MapControllerRoute(
-        name: "default",
-        pattern: "{controller=Home}/{action=Index}/{id?}")
+        "default",
+        "{controller=Home}/{action=Index}/{id?}")
     .WithStaticAssets();
 
 app.MapRazorPages()

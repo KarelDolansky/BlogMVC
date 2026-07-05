@@ -1,14 +1,16 @@
 using System.Diagnostics;
-using Microsoft.AspNetCore.Mvc;
 using BlogMVC.Models;
+using BlogMVC.Services;
+using Microsoft.AspNetCore.Mvc;
 
 namespace BlogMVC.Controllers;
 
-public class HomeController : Controller
+public class HomeController(IPostService postService) : BaseController
 {
-    public IActionResult Index()
+    public async Task<IActionResult> Index()
     {
-        return View();
+        var posts = await postService.GetPostsAsync();
+        return View(posts);
     }
 
     public IActionResult Privacy()
