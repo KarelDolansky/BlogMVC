@@ -9,14 +9,13 @@ on:
     types: [ opened, edited, synchronize, reopened ]
 
 jobs:
-  build-and-test:
-    runs-on: [self-hosted, linux, debian]
+  build:
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
-
-      - name: Setup .NET Core sdk
-        uses: actions/setup-dotnet@v3
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x 
 
