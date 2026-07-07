@@ -4,7 +4,7 @@ using BlogMVC.Services;
 using BlogMVC.Tests.Helpers;
 using Moq;
 
-namespace BlogMVC.Tests;
+namespace BlogMVC.Tests.Services;
 
 public class PostServiceTests
 {
@@ -303,8 +303,8 @@ public class PostServiceTests
         await _postService.EditPostAsync("1", editPostDto);
 
         // Assert
-        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", It.Is<Post>(post =>
-            post.ModifiedDate == DefaultDate
+        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", It.Is<Post>(post1 =>
+            post1.ModifiedDate == DefaultDate
         )), Times.Once);
     }
 
@@ -379,9 +379,9 @@ public class PostServiceTests
         await _postService.EditPostAsync("1", editPostDto);
 
         // Assert
-        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", It.Is<Post>(post =>
-            post.Title == "Title1" &&
-            post.Content == "Content1"
+        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", It.Is<Post>(post1 =>
+            post1.Title == "Title1" &&
+            post1.Content == "Content1"
         )), Times.Once);
     }
 }
