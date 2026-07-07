@@ -3,7 +3,7 @@ name: Build and Test
 on:
   push:
     branches:
-      - 'master'
+      - 'main'
       - 'development'
   pull_request:
     types: [ opened, edited, synchronize, reopened ]
