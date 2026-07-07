@@ -1,0 +1,33 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - 'master'
+      - 'development'
+  pull_request:
+    types: [ opened, edited, synchronize, reopened ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x 
+
+      - name: Restore dependencies
+        run: dotnet restore BlogMVC.sln
+
+      - name: Run tests
+        run: dotnet test BlogMVC.Tests/BlogMVC.Tests.csproj /p:CollectCoverage=true /p:CoverletOutputFormat=cobertura /p:ExcludeByFile="**/*Migrations/*.cs"
+
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v5
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          slug: KarelDolansky/BlogMVC
+          files: BlogMVC.Tests/coverage.cobertura.xml
