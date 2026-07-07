@@ -30,4 +30,4 @@ jobs:
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           slug: KarelDolansky/BlogMVC
-          files: '**/coverage.cobertura.xml'
+          files: BlogMVC.Tests/coverage.cobertura.xml
