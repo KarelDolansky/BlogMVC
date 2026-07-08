@@ -24,7 +24,7 @@ public class PostController(IPostService postService) : BaseController
     {
         if (!ModelState.IsValid) return View(createPostDto);
         var createdPost = await postService.AddPostAsync(createPostDto);
-        return RedirectToAction("details", new { id = createdPost.Id });
+        return RedirectToAction("Details", new { id = createdPost.Id });
     }
 
     public async Task<IActionResult> Edit(string id)
@@ -48,7 +48,7 @@ public class PostController(IPostService postService) : BaseController
 
         var result = await postService.EditPostAsync(id, editPostDto);
         if (!result) return View(editPostDto);
-        return RedirectToAction("details", new { id });
+        return RedirectToAction("Details", new { id });
     }
 
     public async Task<IActionResult> Delete(string id)

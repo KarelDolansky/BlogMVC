@@ -3,7 +3,7 @@
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-lg-6 ">
-            <a class="btn btn-outline-secondary" asp-controller="post" asp-action="Details"
+            <a class="btn btn-outline-secondary" asp-controller="Post" asp-action="Details"
                asp-route-id="@ViewContext.RouteData.Values["id"]">Go back</a>
             <form asp-route-id="@ViewContext.RouteData.Values["id"]" asp-controller="Post" asp-action="Edit">
                 <div class="mb-3">
