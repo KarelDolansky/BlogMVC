@@ -12,8 +12,11 @@ namespace BlogMVC.Tests.IntegrationTests;
 
 public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
 {
+    static readonly DateTime DefaultDate = new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private readonly HttpClient _client;
+    private readonly string _defaultId = "507f1f77bcf86cd799439011";
     private readonly WebApplicationFactory<Program> _factory;
+
 
     public PostControllerIntegrationTests(WebApplicationFactory<Program> factory)
     {
@@ -36,7 +39,7 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     // ---------- Details ----------
 
     [Fact]
-    public async Task GetDetails_WithWrongPostId_ReturnsNotFound()
+    public async Task Details_WithInvalidPostId_ReturnsNotFound()
     {
         //Arrange
         var id = "wrongPostId";
@@ -49,11 +52,24 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     }
 
     [Fact]
-    public async Task GetDetails_WithValidPost_ReturnsOk()
+    public async Task Details_NotFoundPost_ReturnsNotFound()
+    {
+        // Arrange
+        var id = _defaultId;
+
+        // Act
+        var response = await _client.GetAsync($"/Post/Details/{id}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Details_WithValidPost_ReturnsOk()
     {
         // Arrange
         var post = new PostFactory()
-            .WithId("507f1f77bcf86cd799439011")
+            .WithId(_defaultId)
             .WithTitle("Test Title")
             .Build();
 
@@ -67,5 +83,307 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
+        Assert.Contains("AuthorDefault", content);
+        Assert.Contains($"/Post/Edit/{_defaultId}", content);
+        Assert.Contains($"/Post/Delete/{_defaultId}", content);
+    }
+
+    [Fact]
+    public async Task Details_WithModifiedPost_ShowsModifiedDate()
+    {
+        // Arrange
+        var post = new PostFactory()
+            .WithId(_defaultId)
+            .WithTitle("Test Title")
+            .WithPublishDate(DefaultDate)
+            .WithModifiedDate(DefaultDate.AddDays(1))
+            .Build();
+
+        var repository = _factory.Services.GetRequiredService<IPostRepository>();
+        await repository.InsertOneAsync(post);
+
+        // Act
+        var response = await _client.GetAsync($"/Post/Details/{post.Id}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains(DefaultDate.AddDays(1).ToString("dd/MM/yyyy"), content);
+    }
+
+    // ---------- Create GET ----------
+
+    [Fact]
+    public async Task Create_ReturnsView()
+    {
+        var response = await _client.GetAsync("/Post/Create");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    // ---------- Create POST ----------
+
+    [Fact]
+    public async Task Create_POST_WithInvalidTitle_ReturnsView()
+    {
+        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "Title", "" },
+            { "Content", "Test Content" }
+        });
+
+        var response = await _client.PostAsync("/Post/Create", formData);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Test Content", content);
+        Assert.Contains("The Title field is required.", content);
+    }
+
+    [Fact]
+    public async Task Create_POST_WithInvalidContent_ReturnsView()
+    {
+        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "Title", "Test Title" },
+            { "Content", "" }
+        });
+
+        var response = await _client.PostAsync("/Post/Create", formData);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Test Title", content);
+        Assert.Contains("The Content field is required.", content);
+    }
+
+    [Fact]
+    public async Task Create_POST_WithValidContent_ReturnsDetailsView()
+    {
+        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "Title", "Test Title" },
+            { "Content", "Test Content" }
+        });
+
+        var response = await _client.PostAsync("/Post/Create", formData);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Test Title", content);
+        Assert.Contains("Test Content", content);
+    }
+
+    // ---------- Edit GET ----------
+
+    [Fact]
+    public async Task Edit_WithInvalidPostId_ReturnsNotFound()
+    {
+        var id = "wrongPostId";
+        var response = await _client.GetAsync($"/Post/Edit/{id}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Edit_NotFoundPost_ReturnsNotFound()
+    {
+        var id = _defaultId;
+        var response = await _client.GetAsync($"/Post/Edit/{id}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Edit_ReturnsView()
+    {
+        var post = new PostFactory()
+            .WithId(_defaultId)
+            .WithTitle("Test Title")
+            .WithContent("Test Content")
+            .Build();
+
+        var repository = _factory.Services.GetRequiredService<IPostRepository>();
+        await repository.InsertOneAsync(post);
+
+        var response = await _client.GetAsync($"/Post/Edit/{post.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Test Title", content);
+        Assert.Contains("Test Content", content);
+        Assert.Contains($"/Post/Details/{post.Id}", content);
+    }
+
+    // ---------- Edit POST ----------
+
+    [Fact]
+    public async Task Edit_POST_WithInvalidPostId_ReturnsNotFound()
+    {
+        var id = "wrongPostId";
+
+        var response = await _client.PostAsync($"/Post/Edit/{id}",
+            new FormUrlEncodedContent(new Dictionary<string, string>()));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Edit_POST_WithInvalidTitle_ReturnsView()
+    {
+        var id = _defaultId;
+        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "Title", "" },
+            { "Content", "Test Content" }
+        });
+
+        var response = await _client.PostAsync($"/Post/Edit/{id}", formData);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Test Content", content);
+    }
+
+    [Fact]
+    public async Task Edit_POST_WithInvalidContent_ReturnsView()
+    {
+        var id = _defaultId;
+        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "Title", "Test Title" },
+            { "Content", "" }
+        });
+
+        var response = await _client.PostAsync($"/Post/Edit/{id}", formData);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Test Title", content);
+    }
+
+    [Fact]
+    public async Task Edit_POST_NotFoundPost_ReturnsView()
+    {
+        var id = _defaultId;
+        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "Title", "Test Title" },
+            { "Content", "Test Content" }
+        });
+
+        var response = await _client.PostAsync($"/Post/Edit/{id}", formData);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Test Title", content);
+        Assert.Contains("Test Content", content);
+    }
+
+    [Fact]
+    public async Task Edit_POST_ReturnsView()
+    {
+        var id = _defaultId;
+        var post = new PostFactory()
+            .WithId(_defaultId)
+            .WithTitle("Test Title2")
+            .WithContent("Test Content2")
+            .Build();
+
+        var repository = _factory.Services.GetRequiredService<IPostRepository>();
+        await repository.InsertOneAsync(post);
+
+        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "Title", "Test Title" },
+            { "Content", "Test Content" }
+        });
+
+        var response = await _client.PostAsync($"/Post/Edit/{id}", formData);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Test Title", content);
+        Assert.Contains("Test Content", content);
+        Assert.Contains("AuthorDefault", content);
+        Assert.Contains($"/Post/Edit/{_defaultId}", content);
+        Assert.Contains($"/Post/Delete/{_defaultId}", content);
+    }
+
+    // ---------- Delete GET ----------
+
+    [Fact]
+    public async Task Delete_InvalidPostId_ReturnsNotFound()
+    {
+        var id = "wrongPostId";
+        var response = await _client.GetAsync($"/Post/Delete/{id}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_NotFoundPost_ReturnsNotFound()
+    {
+        var id = _defaultId;
+        var response = await _client.GetAsync($"/Post/Delete/{id}");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_ReturnsView()
+    {
+        var post = new PostFactory()
+            .WithId(_defaultId)
+            .WithTitle("Test Title")
+            .WithContent("Test Content")
+            .Build();
+
+        var repository = _factory.Services.GetRequiredService<IPostRepository>();
+        await repository.InsertOneAsync(post);
+
+        var response = await _client.GetAsync($"/Post/Delete/{post.Id}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Test Title", content);
+        Assert.Contains("AuthorDefault", content);
+        Assert.Contains($"/Post/Delete/{_defaultId}", content);
+        Assert.Contains($"/Post/Details/{post.Id}", content);
+    }
+
+    // ---------- Delete POST ----------
+
+    [Fact]
+    public async Task Delete_POST_WithInvalidPostId_ReturnsNotFound()
+    {
+        var id = "wrongPostId";
+
+        var response = await _client.PostAsync($"/Post/Delete/{id}",
+            new FormUrlEncodedContent(new Dictionary<string, string>()));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_POST_NotfoundPost_ReturnsNotFound()
+    {
+        var id = _defaultId;
+
+        var response = await _client.PostAsync($"/Post/Delete/{id}",
+            new FormUrlEncodedContent(new Dictionary<string, string>()));
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Delete_POST_ReturnsView()
+    {
+        var post = new PostFactory()
+            .WithId(_defaultId)
+            .Build();
+
+        var repository = _factory.Services.GetRequiredService<IPostRepository>();
+        await repository.InsertOneAsync(post);
+
+        var response = await _client.PostAsync($"/Post/Delete/{post.Id}",
+            new FormUrlEncodedContent(new Dictionary<string, string>()));
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }
