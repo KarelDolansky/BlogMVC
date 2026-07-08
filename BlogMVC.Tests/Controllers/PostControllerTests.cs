@@ -111,7 +111,7 @@ public class PostControllerTests
 
         //Assert
         Assert.IsType<RedirectToActionResult>(response);
-        Assert.Equal("details", ((RedirectToActionResult)response).ActionName);
+        Assert.Equal("Details", ((RedirectToActionResult)response).ActionName);
         Assert.Equal(_defaultId, ((RedirectToActionResult)response).RouteValues!["id"]);
     }
 
@@ -232,7 +232,7 @@ public class PostControllerTests
 
         //Assert
         Assert.IsType<RedirectToActionResult>(response);
-        Assert.Equal("details", ((RedirectToActionResult)response).ActionName);
+        Assert.Equal("Details", ((RedirectToActionResult)response).ActionName);
         Assert.Equal(_defaultId, ((RedirectToActionResult)response).RouteValues!["id"]);
     }
 

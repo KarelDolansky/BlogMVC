@@ -10,6 +10,7 @@
 
     <ItemGroup>
         <None Update="app.db" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+        <None Include="appsettings.Testing.json"/>
     </ItemGroup>
 
     <ItemGroup>

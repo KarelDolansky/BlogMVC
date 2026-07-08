@@ -8,7 +8,7 @@ namespace BlogMVC.Tests.Services;
 
 public class PostServiceTests
 {
-    static readonly DateTime DefaultDate = new DateTime(2001, 1, 1);
+    static readonly DateTime DefaultDate = new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private readonly Mock<IDateTimeProvider> _dateTimeProviderMock;
     private readonly Mock<IPostRepository> _postRepositoryMock;
     private readonly PostService _postService;
