@@ -4,7 +4,7 @@
 <div class="container">
     <div class="row justify-content-center">
         <div class="col-lg-6 ">
-            <a class="btn btn-outline-secondary" asp-controller="home" asp-action="Index">Go back</a>
+            <a class="btn btn-outline-secondary" asp-controller="Home" asp-action="Index">Go back</a>
             <a class="btn btn-outline-secondary" asp-controller="Post" asp-action="Edit"
                asp-route-id="@Model.Id">Edit</a> <!-- TODO: Authorization; -->
             <a class="btn btn-danger" asp-controller="Post" asp-action="Delete" asp-route-id="@Model.Id">Delete</a>

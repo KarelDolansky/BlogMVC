@@ -4,11 +4,11 @@ using BlogMVC.Services;
 using BlogMVC.Tests.Helpers;
 using Moq;
 
-namespace BlogMVC.Tests;
+namespace BlogMVC.Tests.Services;
 
 public class PostServiceTests
 {
-    static readonly DateTime DefaultDate = new DateTime(2001, 1, 1);
+    static readonly DateTime DefaultDate = new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private readonly Mock<IDateTimeProvider> _dateTimeProviderMock;
     private readonly Mock<IPostRepository> _postRepositoryMock;
     private readonly PostService _postService;
@@ -303,8 +303,8 @@ public class PostServiceTests
         await _postService.EditPostAsync("1", editPostDto);
 
         // Assert
-        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", It.Is<Post>(post =>
-            post.ModifiedDate == DefaultDate
+        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", It.Is<Post>(post1 =>
+            post1.ModifiedDate == DefaultDate
         )), Times.Once);
     }
 
@@ -379,9 +379,9 @@ public class PostServiceTests
         await _postService.EditPostAsync("1", editPostDto);
 
         // Assert
-        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", It.Is<Post>(post =>
-            post.Title == "Title1" &&
-            post.Content == "Content1"
+        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", It.Is<Post>(post1 =>
+            post1.Title == "Title1" &&
+            post1.Content == "Content1"
         )), Times.Once);
     }
 }
