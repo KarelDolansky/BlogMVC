@@ -12,11 +12,10 @@ namespace BlogMVC.Tests.IntegrationTests;
 
 public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
 {
-    static readonly DateTime DefaultDate = new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime DefaultDate = new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private readonly HttpClient _client;
     private readonly string _defaultId = "507f1f77bcf86cd799439011";
     private readonly WebApplicationFactory<Program> _factory;
-
 
     public PostControllerIntegrationTests(WebApplicationFactory<Program> factory)
     {
@@ -41,13 +40,13 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task Details_WithInvalidPostId_ReturnsNotFound()
     {
-        //Arrange
+        // Arrange
         var id = "wrongPostId";
 
-        //Act
+        // Act
         var response = await _client.GetAsync($"/Post/Details/{id}/");
 
-        //Assert
+        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
@@ -65,7 +64,7 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     }
 
     [Fact]
-    public async Task Details_WithValidPost_ReturnsOk()
+    public async Task Details_WithValidPost_ReturnsView()
     {
         // Arrange
         var post = new PostFactory()
@@ -116,8 +115,10 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task Create_ReturnsView()
     {
+        // Act
         var response = await _client.GetAsync("/Post/Create");
 
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
@@ -126,14 +127,17 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task Create_POST_WithInvalidTitle_ReturnsView()
     {
+        // Arrange
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "" },
             { "Content", "Test Content" }
         });
 
+        // Act
         var response = await _client.PostAsync("/Post/Create", formData);
 
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Content", content);
@@ -143,14 +147,17 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task Create_POST_WithInvalidContent_ReturnsView()
     {
+        // Arrange
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "Test Title" },
             { "Content", "" }
         });
 
+        // Act
         var response = await _client.PostAsync("/Post/Create", formData);
 
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
@@ -160,14 +167,17 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task Create_POST_WithValidContent_ReturnsDetailsView()
     {
+        // Arrange
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "Test Title" },
             { "Content", "Test Content" }
         });
 
+        // Act
         var response = await _client.PostAsync("/Post/Create", formData);
 
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
@@ -179,22 +189,33 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task Edit_WithInvalidPostId_ReturnsNotFound()
     {
+        // Arrange
         var id = "wrongPostId";
+
+        // Act
         var response = await _client.GetAsync($"/Post/Edit/{id}");
+
+        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task Edit_NotFoundPost_ReturnsNotFound()
     {
+        // Arrange
         var id = _defaultId;
+
+        // Act
         var response = await _client.GetAsync($"/Post/Edit/{id}");
+
+        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task Edit_ReturnsView()
     {
+        // Arrange
         var post = new PostFactory()
             .WithId(_defaultId)
             .WithTitle("Test Title")
@@ -204,8 +225,10 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
         var repository = _factory.Services.GetRequiredService<IPostRepository>();
         await repository.InsertOneAsync(post);
 
+        // Act
         var response = await _client.GetAsync($"/Post/Edit/{post.Id}");
 
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
@@ -218,17 +241,21 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task Edit_POST_WithInvalidPostId_ReturnsNotFound()
     {
+        // Arrange
         var id = "wrongPostId";
 
+        // Act
         var response = await _client.PostAsync($"/Post/Edit/{id}",
             new FormUrlEncodedContent(new Dictionary<string, string>()));
 
+        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task Edit_POST_WithInvalidTitle_ReturnsView()
     {
+        // Arrange
         var id = _defaultId;
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -236,8 +263,10 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
             { "Content", "Test Content" }
         });
 
+        // Act
         var response = await _client.PostAsync($"/Post/Edit/{id}", formData);
 
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Content", content);
@@ -246,6 +275,7 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task Edit_POST_WithInvalidContent_ReturnsView()
     {
+        // Arrange
         var id = _defaultId;
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -253,8 +283,10 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
             { "Content", "" }
         });
 
+        // Act
         var response = await _client.PostAsync($"/Post/Edit/{id}", formData);
 
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
@@ -263,6 +295,7 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task Edit_POST_NotFoundPost_ReturnsView()
     {
+        // Arrange
         var id = _defaultId;
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -270,8 +303,10 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
             { "Content", "Test Content" }
         });
 
+        // Act
         var response = await _client.PostAsync($"/Post/Edit/{id}", formData);
 
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
@@ -281,6 +316,7 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task Edit_POST_ReturnsView()
     {
+        // Arrange
         var id = _defaultId;
         var post = new PostFactory()
             .WithId(_defaultId)
@@ -297,8 +333,10 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
             { "Content", "Test Content" }
         });
 
+        // Act
         var response = await _client.PostAsync($"/Post/Edit/{id}", formData);
 
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
@@ -311,24 +349,35 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     // ---------- Delete GET ----------
 
     [Fact]
-    public async Task Delete_InvalidPostId_ReturnsNotFound()
+    public async Task Delete_WithInvalidPostId_ReturnsNotFound()
     {
+        // Arrange
         var id = "wrongPostId";
+
+        // Act
         var response = await _client.GetAsync($"/Post/Delete/{id}");
+
+        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task Delete_NotFoundPost_ReturnsNotFound()
     {
+        // Arrange
         var id = _defaultId;
+
+        // Act
         var response = await _client.GetAsync($"/Post/Delete/{id}");
+
+        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task Delete_ReturnsView()
     {
+        // Arrange
         var post = new PostFactory()
             .WithId(_defaultId)
             .WithTitle("Test Title")
@@ -338,7 +387,10 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
         var repository = _factory.Services.GetRequiredService<IPostRepository>();
         await repository.InsertOneAsync(post);
 
+        // Act
         var response = await _client.GetAsync($"/Post/Delete/{post.Id}");
+
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
@@ -352,28 +404,35 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
     [Fact]
     public async Task Delete_POST_WithInvalidPostId_ReturnsNotFound()
     {
+        // Arrange
         var id = "wrongPostId";
 
+        // Act
         var response = await _client.PostAsync($"/Post/Delete/{id}",
             new FormUrlEncodedContent(new Dictionary<string, string>()));
 
+        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
-    public async Task Delete_POST_NotfoundPost_ReturnsNotFound()
+    public async Task Delete_POST_NotFoundPost_ReturnsNotFound()
     {
+        // Arrange
         var id = _defaultId;
 
+        // Act
         var response = await _client.PostAsync($"/Post/Delete/{id}",
             new FormUrlEncodedContent(new Dictionary<string, string>()));
 
+        // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]
     public async Task Delete_POST_ReturnsView()
     {
+        // Arrange
         var post = new PostFactory()
             .WithId(_defaultId)
             .Build();
@@ -381,9 +440,11 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
         var repository = _factory.Services.GetRequiredService<IPostRepository>();
         await repository.InsertOneAsync(post);
 
+        // Act
         var response = await _client.PostAsync($"/Post/Delete/{post.Id}",
             new FormUrlEncodedContent(new Dictionary<string, string>()));
 
+        // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }
