@@ -26,14 +26,14 @@ public class BlogController(IPostService postService) : BaseApiController
     [HttpPost]
     public async Task<ActionResult<Post>> CreatePost(CreatePostDto createPostDto)
     {
-        var created = await postService.AddPostAsync(createPostDto);
+        var created = await postService.AddPostAsync(createPostDto, "default", "default"); //TODO: Authorized;
         return CreatedAtRoute("GetPost", new { id = created.Id }, created);
     }
 
     [HttpPost("bulk")]
     public async Task<ActionResult<IReadOnlyList<Post>>> BulkCreatePosts(List<CreatePostDto> createPostDtoes)
     {
-        var created = await postService.AddBulkPostAsync(createPostDtoes);
+        var created = await postService.AddBulkPostAsync(createPostDtoes, "default", "default"); //TODO: Authorized;
         return StatusCode(StatusCodes.Status201Created, created);
     }
 

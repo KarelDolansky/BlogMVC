@@ -15,21 +15,23 @@ public class PostService(IDateTimeProvider dateTimeProvider, IPostRepository pos
         return await postRepository.FindAsync(id);
     }
 
-    public async Task<Post> AddPostAsync(CreatePostDto createPostDto)
+    public async Task<Post> AddPostAsync(CreatePostDto createPostDto, string authorId, string author)
     {
         var date = dateTimeProvider.Now;
         var post = new Post
         {
             Title = createPostDto.Title,
             Content = createPostDto.Content,
-            Author = "AuthorDefault", //TODO: automate creating author;
+            AuthorId = authorId,
+            Author = author,
             PublishDate = date,
             ModifiedDate = date
         };
         return await postRepository.InsertOneAsync(post);
     }
 
-    public async Task<IReadOnlyList<Post>> AddBulkPostAsync(List<CreatePostDto> createPostDtoes)
+    public async Task<IReadOnlyList<Post>> AddBulkPostAsync(List<CreatePostDto> createPostDtoes, string authorId,
+        string author)
     {
         var posts = new List<Post>();
         foreach (var createPostDto in createPostDtoes)
@@ -39,7 +41,8 @@ public class PostService(IDateTimeProvider dateTimeProvider, IPostRepository pos
             {
                 Title = createPostDto.Title,
                 Content = createPostDto.Content,
-                Author = "AuthorDefault", //TODO: automate creating author;
+                AuthorId = authorId,
+                Author = author,
                 PublishDate = date,
                 ModifiedDate = date
             };

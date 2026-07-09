@@ -8,7 +8,8 @@ public class PostFactory
     {
         Title = "Title",
         Content = "Content",
-        Author = "AuthorDefault",
+        AuthorId = "AuthorId",
+        Author = "Author",
     };
 
     public PostFactory WithId(string id)
@@ -26,6 +27,12 @@ public class PostFactory
     public PostFactory WithContent(string content)
     {
         _entity.Content = content;
+        return this;
+    }
+
+    public PostFactory WithAuthorId(string authorId)
+    {
+        _entity.AuthorId = authorId;
         return this;
     }
 

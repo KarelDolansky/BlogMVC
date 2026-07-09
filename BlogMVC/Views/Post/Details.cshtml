@@ -1,3 +1,4 @@
+@using System.Security.Claims
 @model Post
 
 
@@ -5,10 +6,12 @@
     <div class="row justify-content-center">
         <div class="col-lg-6 ">
             <a class="btn btn-outline-secondary" asp-controller="Home" asp-action="Index">Go back</a>
-            <a class="btn btn-outline-secondary" asp-controller="Post" asp-action="Edit"
-               asp-route-id="@Model.Id">Edit</a> <!-- TODO: Authorization; -->
-            <a class="btn btn-danger" asp-controller="Post" asp-action="Delete" asp-route-id="@Model.Id">Delete</a>
-            <!-- TODO: Authorization; -->
+            @if (Model.AuthorId == User.FindFirstValue(ClaimTypes.NameIdentifier))
+            {
+                <a class="btn btn-outline-secondary" asp-controller="Post" asp-action="Edit"
+                   asp-route-id="@Model.Id">Edit</a>
+                <a class="btn btn-danger" asp-controller="Post" asp-action="Delete" asp-route-id="@Model.Id">Delete</a>
+            }
             <h1>@Model.Title</h1>
             <div class="border-bottom mb-3 pb-3">
                 <p class="text-muted ">@Model.Author</p>
