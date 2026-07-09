@@ -31,7 +31,6 @@ builder.Services.AddSingleton(new MongoClient(connectionStringMongoDb));
 
 //Services
 builder.Services.AddSingleton<IPostService, PostService>();
-builder.Services.AddSingleton<IPostMarkdownReaderService, PostMarkdownReaderService>();
 builder.Services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 builder.Services.AddSingleton<IPostRepository, PostRepository>();
 
