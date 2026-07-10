@@ -9,6 +9,12 @@ using Moq;
 
 namespace BlogMVC.Tests.Controllers;
 
+/// <summary>
+/// Unit tests for <see cref="PostController"/> using a mocked <see cref="IPostService"/>.
+/// Verify the return type of each action (View/NotFound/Unauthorized/Forbid/Redirect)
+/// depending on Id validity, model state, and whether the logged-in user is the author.
+/// Tests are grouped by action (Details, Create, Edit, Delete).
+/// </summary>
 public class PostControllerTests
 {
     private readonly string _defaultAuthor = "defaultAuthor";
@@ -62,6 +68,7 @@ public class PostControllerTests
 
     // ---------- Details ----------
 
+    /// <summary>Verifies that Details with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Details_WithWrongPostId_ReturnsNotFound()
     {
@@ -75,6 +82,7 @@ public class PostControllerTests
         Assert.IsType<NotFoundResult>(response);
     }
 
+    /// <summary>Verifies that Details when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Details_NotFoundPost_ReturnsNotFound()
     {
@@ -89,6 +97,7 @@ public class PostControllerTests
         Assert.IsType<NotFoundResult>(response);
     }
 
+    /// <summary>Verifies that Details returns a View.</summary>
     [Fact]
     public async Task Details_ReturnsView()
     {
@@ -107,6 +116,7 @@ public class PostControllerTests
 
     // ---------- Create GET ----------
 
+    /// <summary>Verifies that Create returns a View.</summary>
     [Fact]
     public void Create_ReturnsView()
     {
@@ -119,6 +129,7 @@ public class PostControllerTests
 
     // ---------- Create POST ----------
 
+    /// <summary>Verifies that Create (POST) with an invalid model returns the View again.</summary>
     [Fact]
     public async Task Create_POST_WithModelInvalid_ReturnView()
     {
@@ -136,6 +147,7 @@ public class PostControllerTests
         Assert.Equal(createPostDto, ((ViewResult)response).Model);
     }
 
+    /// <summary>Verifies that Create (POST) without a logged-in user's Id returns Unauthorized.</summary>
     [Fact]
     public async Task Create_POST_WithEmptyUserId_ReturnsUnauthorized()
     {
@@ -150,6 +162,7 @@ public class PostControllerTests
         Assert.IsType<UnauthorizedResult>(response);
     }
 
+    /// <summary>Verifies that Create (POST) without a logged-in user's name returns Unauthorized.</summary>
     [Fact]
     public async Task Create_POST_WithEmptyUserName_ReturnsUnauthorized()
     {
@@ -164,6 +177,7 @@ public class PostControllerTests
         Assert.IsType<UnauthorizedResult>(response);
     }
 
+    /// <summary>Verifies that Create (POST) with a valid model returns a redirect (RedirectToAction).</summary>
     [Fact]
     public async Task Create_POST_WithModelValid_ReturnRedirectToAction()
     {
@@ -188,6 +202,7 @@ public class PostControllerTests
 
     // ---------- Edit GET ----------
 
+    /// <summary>Verifies that Edit with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Edit_WithWrongPostId_ReturnsNotFound()
     {
@@ -201,6 +216,7 @@ public class PostControllerTests
         Assert.IsType<NotFoundResult>(response);
     }
 
+    /// <summary>Verifies that Edit when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Edit_NotFoundPost_ReturnsNotFound()
     {
@@ -215,6 +231,7 @@ public class PostControllerTests
         Assert.IsType<NotFoundResult>(response);
     }
 
+    /// <summary>Verifies that Edit without a logged-in user's Id returns Unauthorized.</summary>
     [Fact]
     public async Task Edit_WithEmptyUserId_ReturnsUnauthorized()
     {
@@ -229,6 +246,7 @@ public class PostControllerTests
         Assert.IsType<UnauthorizedResult>(response);
     }
 
+    /// <summary>Verifies that Edit when the logged-in user is not the post's author returns Forbid.</summary>
     [Fact]
     public async Task Edit_NotAuthor_ReturnsForbid()
     {
@@ -246,6 +264,7 @@ public class PostControllerTests
         Assert.IsType<ForbidResult>(response);
     }
 
+    /// <summary>Verifies that Edit returns a View.</summary>
     [Fact]
     public async Task Edit_ReturnsView()
     {
@@ -273,6 +292,7 @@ public class PostControllerTests
 
     // ---------- Edit POST ----------
 
+    /// <summary>Verifies that Edit (POST) with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Edit_POST_WithWrongPostId_ReturnsNotFound()
     {
@@ -287,6 +307,7 @@ public class PostControllerTests
         Assert.IsType<NotFoundResult>(response);
     }
 
+    /// <summary>Verifies that Edit (POST) when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Edit_POST_NotFoundPost_ReturnsNotFound()
     {
@@ -302,6 +323,7 @@ public class PostControllerTests
         Assert.IsType<NotFoundResult>(response);
     }
 
+    /// <summary>Verifies that Edit (POST) with an invalid model returns the View again.</summary>
     [Fact]
     public async Task Edit_POST_WithModelInvalid_ReturnView()
     {
@@ -320,6 +342,7 @@ public class PostControllerTests
         Assert.Equal(editPostDto, ((ViewResult)response).Model);
     }
 
+    /// <summary>Verifies that Edit (POST) without a logged-in user's Id returns Unauthorized.</summary>
     [Fact]
     public async Task Edit_POST_WithEmptyUserId_ReturnsUnauthorized()
     {
@@ -335,6 +358,7 @@ public class PostControllerTests
         Assert.IsType<UnauthorizedResult>(response);
     }
 
+    /// <summary>Verifies that Edit (POST) when the logged-in user is not the post's author returns Forbid.</summary>
     [Fact]
     public async Task Edit_POST_NotAuthor_ReturnsForbid()
     {
@@ -353,6 +377,7 @@ public class PostControllerTests
         Assert.IsType<ForbidResult>(response);
     }
 
+    /// <summary>Verifies that Edit (POST) when the edit fails in the repository returns a View.</summary>
     [Fact]
     public async Task Edit_POST_EditReturnFalse_ReturnsView()
     {
@@ -373,6 +398,7 @@ public class PostControllerTests
         Assert.Equal(editPostDto, ((ViewResult)response).Model);
     }
 
+    /// <summary>Verifies that Edit (POST) with a valid model returns a redirect (RedirectToAction).</summary>
     [Fact]
     public async Task Edit_POST_WithModelValid_ReturnRedirectToAction()
     {
@@ -396,6 +422,7 @@ public class PostControllerTests
 
     // ---------- Delete GET ----------
 
+    /// <summary>Verifies that Delete with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Delete_WithWrongPostId_ReturnsNotFound()
     {
@@ -409,6 +436,7 @@ public class PostControllerTests
         Assert.IsType<NotFoundResult>(response);
     }
 
+    /// <summary>Verifies that Delete when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Delete_NotFoundPost_ReturnsNotFound()
     {
@@ -423,6 +451,7 @@ public class PostControllerTests
         Assert.IsType<NotFoundResult>(response);
     }
 
+    /// <summary>Verifies that Delete without a logged-in user's Id returns Unauthorized.</summary>
     [Fact]
     public async Task Delete_WithEmptyUserId_ReturnsUnauthorized()
     {
@@ -437,6 +466,7 @@ public class PostControllerTests
         Assert.IsType<UnauthorizedResult>(response);
     }
 
+    /// <summary>Verifies that Delete when the logged-in user is not the post's author returns Forbid.</summary>
     [Fact]
     public async Task Delete_NotAuthor_ReturnsForbid()
     {
@@ -454,6 +484,7 @@ public class PostControllerTests
         Assert.IsType<ForbidResult>(response);
     }
 
+    /// <summary>Verifies that Delete returns a View.</summary>
     [Fact]
     public async Task Delete_ReturnsView()
     {
@@ -474,6 +505,7 @@ public class PostControllerTests
 
     // ---------- Delete POST ----------
 
+    /// <summary>Verifies that Delete (POST) with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Delete_POST_WithWrongPostId_ReturnsNotFound()
     {
@@ -487,6 +519,7 @@ public class PostControllerTests
         Assert.IsType<NotFoundResult>(response);
     }
 
+    /// <summary>Verifies that Delete (POST) when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Delete_POST_NotFoundPost_ReturnsNotFound()
     {
@@ -501,6 +534,7 @@ public class PostControllerTests
         Assert.IsType<NotFoundResult>(response);
     }
 
+    /// <summary>Verifies that Delete (POST) without a logged-in user's Id returns Unauthorized.</summary>
     [Fact]
     public async Task Delete_POST_WithEmptyUserId_ReturnsUnauthorized()
     {
@@ -515,6 +549,7 @@ public class PostControllerTests
         Assert.IsType<UnauthorizedResult>(response);
     }
 
+    /// <summary>Verifies that Delete (POST) when the logged-in user is not the post's author returns Forbid.</summary>
     [Fact]
     public async Task Delete_POST_NotAuthor_ReturnsForbid()
     {
@@ -532,6 +567,7 @@ public class PostControllerTests
         Assert.IsType<ForbidResult>(response);
     }
 
+    /// <summary>Verifies that Delete (POST) when deletion fails in the repository returns NotFound.</summary>
     [Fact]
     public async Task Delete_POST_DeleteFails_ReturnsNotFound()
     {
@@ -550,6 +586,7 @@ public class PostControllerTests
         Assert.IsType<NotFoundResult>(response);
     }
 
+    /// <summary>Verifies that Delete (POST) returns a redirect (RedirectToActionResult).</summary>
     [Fact]
     public async Task Delete_POST_ReturnsRedirectToActionResult()
     {

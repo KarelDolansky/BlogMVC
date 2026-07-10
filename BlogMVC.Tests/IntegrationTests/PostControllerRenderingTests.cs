@@ -6,12 +6,18 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BlogMVC.Tests.IntegrationTests;
 
+/// <summary>
+/// Integration tests focused on the rendered HTML output of <see cref="PostController"/>
+/// (checking that the response contains the expected content, forms, and field values),
+/// against the real app and a real MongoDB instance.
+/// </summary>
 [Collection("PostController")]
 public class PostControllerRenderingTests(WebApplicationFactory<Program> factory)
     : PostControllerTestBase(factory)
 {
     // ---------- Details ----------
 
+    /// <summary>Verifies that Details with a valid post returns a View.</summary>
     [Fact]
     public async Task Details_WithValidPost_ReturnsView()
     {
@@ -36,6 +42,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Contains("Go back", content);
     }
 
+    /// <summary>Verifies that Details AsAnonymousUser HidesEditAndDeleteLinks.</summary>
     [Fact]
     public async Task Details_AsAnonymousUser_HidesEditAndDeleteLinks()
     {
@@ -58,6 +65,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.DoesNotContain($"/Post/Delete/{DefaultId}", content);
     }
 
+    /// <summary>Verifies that Details AsOwner ShowsEditAndDeleteLinks.</summary>
     [Fact]
     public async Task Details_AsOwner_ShowsEditAndDeleteLinks()
     {
@@ -82,6 +90,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Contains($"/Post/Delete/{DefaultId}", content);
     }
 
+    /// <summary>Verifies that Details AsDifferentUser HidesEditAndDeleteLinks.</summary>
     [Fact]
     public async Task Details_AsDifferentUser_HidesEditAndDeleteLinks()
     {
@@ -106,6 +115,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.DoesNotContain($"/Post/Delete/{DefaultId}", content);
     }
 
+    /// <summary>Verifies that Details WithModifiedPost ShowsModifiedDate.</summary>
     [Fact]
     public async Task Details_WithModifiedPost_ShowsModifiedDate()
     {
@@ -129,6 +139,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Contains(DefaultDate.AddDays(1).ToString("dd/MM/yyyy"), content);
     }
 
+    /// <summary>Verifies that Details WithUnmodifiedPost DoesNotDuplicateDate.</summary>
     [Fact]
     public async Task Details_WithUnmodifiedPost_DoesNotDuplicateDate()
     {
@@ -156,6 +167,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
 
     // ---------- Create GET ----------
 
+    /// <summary>Verifies that Create returns a View.</summary>
     [Fact]
     public async Task Create_ReturnsView()
     {
@@ -175,6 +187,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
 
     // ---------- Create POST ----------
 
+    /// <summary>Verifies that Create (POST) WithInvalidTitle returns a View.</summary>
     [Fact]
     public async Task Create_POST_WithInvalidTitle_ReturnsView()
     {
@@ -196,6 +209,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Contains("The Title field is required.", content);
     }
 
+    /// <summary>Verifies that Create (POST) WithInvalidContent returns a View.</summary>
     [Fact]
     public async Task Create_POST_WithInvalidContent_ReturnsView()
     {
@@ -217,6 +231,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Contains("The Content field is required.", content);
     }
 
+    /// <summary>Verifies that Create (POST) WithValidContent ReturnsDetailsView.</summary>
     [Fact]
     public async Task Create_POST_WithValidContent_ReturnsDetailsView()
     {
@@ -240,6 +255,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
 
     // ---------- Edit ----------
 
+    /// <summary>Verifies that Edit returns a View.</summary>
     [Fact]
     public async Task Edit_ReturnsView()
     {
@@ -270,6 +286,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Contains("name=\"Content\"", content);
     }
 
+    /// <summary>Verifies that Edit (POST) WithInvalidTitle returns a View.</summary>
     [Fact]
     public async Task Edit_POST_WithInvalidTitle_ReturnsView()
     {
@@ -292,6 +309,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Contains("The Title field is required.", content);
     }
 
+    /// <summary>Verifies that Edit (POST) WithInvalidContent returns a View.</summary>
     [Fact]
     public async Task Edit_POST_WithInvalidContent_ReturnsView()
     {
@@ -314,6 +332,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Contains("The Content field is required.", content);
     }
 
+    /// <summary>Verifies that Edit (POST) returns a View.</summary>
     [Fact]
     public async Task Edit_POST_ReturnsView()
     {
@@ -350,6 +369,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
 
     // ---------- Delete ----------
 
+    /// <summary>Verifies that Delete returns a View.</summary>
     [Fact]
     public async Task Delete_ReturnsView()
     {
@@ -378,6 +398,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Contains($"/Post/Details/{post.Id}", content);
     }
 
+    /// <summary>Verifies that Delete WithModifiedPost ShowsModifiedDate.</summary>
     [Fact]
     public async Task Delete_WithModifiedPost_ShowsModifiedDate()
     {
@@ -403,6 +424,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Contains(DefaultDate.AddDays(1).ToString("dd/MM/yyyy"), content);
     }
 
+    /// <summary>Verifies that Delete WithUnmodifiedPost DoesNotDuplicateDate.</summary>
     [Fact]
     public async Task Delete_WithUnmodifiedPost_DoesNotDuplicateDate()
     {

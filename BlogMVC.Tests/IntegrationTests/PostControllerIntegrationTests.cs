@@ -6,12 +6,18 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace BlogMVC.Tests.IntegrationTests;
 
+/// <summary>
+/// Integration tests for <see cref="PostController"/> against the real app (via an HTTP client from
+/// <see cref="WebApplicationFactory{Program}"/>) and a real MongoDB instance. Verify the behavior of the
+/// whole request including authorization (authenticated/unauthenticated client) and HTTP status codes.
+/// </summary>
 [Collection("PostController")]
 public class PostControllerIntegrationTests(WebApplicationFactory<Program> factory)
     : PostControllerTestBase(factory)
 {
     // ---------- Details ----------
 
+    /// <summary>Verifies that Details with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Details_WithInvalidPostId_ReturnsNotFound()
     {
@@ -25,6 +31,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Details when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Details_NotFoundPost_ReturnsNotFound()
     {
@@ -40,6 +47,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
 
     // ---------- Create GET ----------
 
+    /// <summary>Verifies that Create without authentication returns Unauthorized.</summary>
     [Fact]
     public async Task Create_WithoutAuthentication_ReturnsUnauthorized()
     {
@@ -52,6 +60,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
 
     // ---------- Create POST ----------
 
+    /// <summary>Verifies that Create (POST) without authentication returns Unauthorized.</summary>
     [Fact]
     public async Task Create_POST_WithoutAuthentication_ReturnsUnauthorized()
     {
@@ -71,6 +80,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
 
     // ---------- Edit GET ----------
 
+    /// <summary>Verifies that Edit with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Edit_WithInvalidPostId_ReturnsNotFound()
     {
@@ -85,6 +95,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Edit when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Edit_NotFoundPost_ReturnsNotFound()
     {
@@ -99,6 +110,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Edit without authentication returns Unauthorized.</summary>
     [Fact]
     public async Task Edit_WithoutAuthentication_ReturnsUnauthorized()
     {
@@ -118,6 +130,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>Verifies that Edit when a different user than the author is logged in returns Forbidden.</summary>
     [Fact]
     public async Task Edit_WithDifferentAuthor_ReturnsForbidden()
     {
@@ -141,6 +154,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
 
     // ---------- Edit POST ----------
 
+    /// <summary>Verifies that Edit (POST) with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Edit_POST_WithInvalidPostId_ReturnsNotFound()
     {
@@ -156,6 +170,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Edit (POST) when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Edit_POST_NotFoundPost_ReturnsNotFound()
     {
@@ -175,6 +190,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Edit (POST) without authentication returns Unauthorized.</summary>
     [Fact]
     public async Task Edit_POST_WithoutAuthentication_ReturnsUnauthorized()
     {
@@ -192,6 +208,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>Verifies that Edit (POST) when a different user than the author is logged in returns Forbidden.</summary>
     [Fact]
     public async Task Edit_POST_WithDifferentAuthor_ReturnsForbidden()
     {
@@ -220,6 +237,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
 
     // ---------- Delete GET ----------
 
+    /// <summary>Verifies that Delete with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Delete_WithInvalidPostId_ReturnsNotFound()
     {
@@ -234,6 +252,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Delete when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Delete_NotFoundPost_ReturnsNotFound()
     {
@@ -248,6 +267,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Delete without authentication returns Unauthorized.</summary>
     [Fact]
     public async Task Delete_WithoutAuthentication_ReturnsUnauthorized()
     {
@@ -267,6 +287,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>Verifies that Delete when a different user than the author is logged in returns Forbidden.</summary>
     [Fact]
     public async Task Delete_WithDifferentAuthor_ReturnsForbidden()
     {
@@ -290,6 +311,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
 
     // ---------- Delete POST ----------
 
+    /// <summary>Verifies that Delete (POST) with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Delete_POST_WithInvalidPostId_ReturnsNotFound()
     {
@@ -305,6 +327,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Delete (POST) when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Delete_POST_NotFoundPost_ReturnsNotFound()
     {
@@ -320,6 +343,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Delete (POST) returns a View.</summary>
     [Fact]
     public async Task Delete_POST_ReturnsView()
     {
@@ -342,6 +366,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 
+    /// <summary>Verifies that Delete (POST) without authentication returns Unauthorized.</summary>
     [Fact]
     public async Task Delete_POST_WithoutAuthentication_ReturnsUnauthorized()
     {
@@ -353,6 +378,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    /// <summary>Verifies that Delete (POST) when a different user than the author is logged in returns Forbidden.</summary>
     [Fact]
     public async Task Delete_POST_WithDifferentAuthor_ReturnsForbidden()
     {
