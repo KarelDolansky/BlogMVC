@@ -6,6 +6,11 @@ using Moq;
 
 namespace BlogMVC.Tests.Services;
 
+/// <summary>
+/// Unit tests for <see cref="PostService"/> using a mocked <see cref="IPostRepository"/> and
+/// <see cref="IDateTimeProvider"/>. Verify correct mapping from DTOs to the <see cref="Post"/> entity,
+/// timestamp assignment, and delegation of calls to the repository.
+/// </summary>
 public class PostServiceTests
 {
     static readonly DateTime DefaultDate = new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -24,6 +29,7 @@ public class PostServiceTests
 
     // ---------- AddPostAsync ----------
 
+    /// <summary>Verifies that AddPostAsync sets the publish date from IDateTimeProvider.</summary>
     [Fact]
     public async Task AddPostAsync_SetsPublishDate_FromDateTimeProvider()
     {
@@ -40,6 +46,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
+    /// <summary>Verifies that AddPostAsync sets the modified date from IDateTimeProvider.</summary>
     [Fact]
     public async Task AddPostAsync_SetsModifiedDate_FromDateTimeProvider()
     {
@@ -56,6 +63,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
+    /// <summary>Verifies that AddPostAsync maps the title and content from the DTO.</summary>
     [Fact]
     public async Task AddPostAsync_MapsTitleAndContent_FromDto()
     {
@@ -77,6 +85,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
+    /// <summary>Verifies that AddPostAsync maps the author and author Id from the call parameters.</summary>
     [Fact]
     public async Task AddPostAsync_MapsAuthorAndAuthorId_FromParameters()
     {
@@ -95,6 +104,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
+    /// <summary>Verifies that AddPostAsync returns the post from the repository.</summary>
     [Fact]
     public async Task AddPostAsync_ReturnsPost_FromRepository()
     {
@@ -123,6 +133,7 @@ public class PostServiceTests
 
     // ---------- AddBulkPostAsync ----------
 
+    /// <summary>Verifies that AddBulkPostAsync sets both the publish and modified dates for all posts from IDateTimeProvider.</summary>
     [Fact]
     public async Task AddBulkPostAsync_SetsPublishAndModifiedDate_ForAllPosts_FromDateTimeProvider()
     {
@@ -145,6 +156,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
+    /// <summary>Verifies that AddBulkPostAsync maps the title and content for each DTO.</summary>
     [Fact]
     public async Task AddBulkPostAsync_MapsTitleAndContent_ForEachDto()
     {
@@ -167,6 +179,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
+    /// <summary>Verifies that AddBulkPostAsync maps the author and author Id for each post.</summary>
     [Fact]
     public async Task AddBulkPostAsync_MapsAuthorAndAuthorId_ForEachPost()
     {
@@ -188,6 +201,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
+    /// <summary>Verifies that AddBulkPostAsync with an empty list calls InsertManyAsync with an empty list.</summary>
     [Fact]
     public async Task AddBulkPostAsync_WithEmptyList_CallsInsertManyAsync_WithEmptyList()
     {
@@ -203,6 +217,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
+    /// <summary>Verifies that AddBulkPostAsync returns the posts from the repository.</summary>
     [Fact]
     public async Task AddBulkPostAsync_ReturnsPosts_FromRepository()
     {
@@ -232,6 +247,7 @@ public class PostServiceTests
 
     // ---------- GetPostsAsync ----------
 
+    /// <summary>Verifies that GetPostsAsync returns all posts from the repository.</summary>
     [Fact]
     public async Task GetPostsAsync_ReturnsAllPosts_FromRepository()
     {
@@ -252,6 +268,7 @@ public class PostServiceTests
         _postRepositoryMock.Verify(p => p.FindAllAsync(), Times.Once);
     }
 
+    /// <summary>Verifies that GetPostsAsync when there are no posts returns an empty list.</summary>
     [Fact]
     public async Task GetPostsAsync_WithNoPosts_ReturnsEmptyList()
     {
@@ -267,6 +284,7 @@ public class PostServiceTests
 
     // ---------- GetPostAsync ----------
 
+    /// <summary>Verifies that GetPostAsync with an existing Id returns the post from the repository.</summary>
     [Fact]
     public async Task GetPostAsync_WithExistingId_ReturnsPost_FromRepository()
     {
@@ -283,6 +301,7 @@ public class PostServiceTests
         _postRepositoryMock.Verify(p => p.FindAsync("1"), Times.Once);
     }
 
+    /// <summary>Verifies that GetPostAsync with a non-existing Id returns null.</summary>
     [Fact]
     public async Task GetPostAsync_WithNonExistingId_ReturnsNull()
     {
@@ -298,6 +317,7 @@ public class PostServiceTests
 
     // ---------- DeletePostAsync ----------
 
+    /// <summary>Verifies that DeletePostAsync with an existing Id returns true.</summary>
     [Fact]
     public async Task DeletePostAsync_WithExistingId_ReturnsTrue()
     {
@@ -312,6 +332,7 @@ public class PostServiceTests
         _postRepositoryMock.Verify(p => p.DeleteOneAsync("1"), Times.Once);
     }
 
+    /// <summary>Verifies that DeletePostAsync with a non-existing Id returns false.</summary>
     [Fact]
     public async Task DeletePostAsync_WithNonExistingId_ReturnsFalse()
     {
@@ -327,6 +348,7 @@ public class PostServiceTests
 
     // ---------- EditPostAsync ----------
 
+    /// <summary>Verifies that EditPostAsync sets the modified date from IDateTimeProvider.</summary>
     [Fact]
     public async Task EditPostAsync_SetsModifiedDate_FromDateTimeProvider()
     {
@@ -350,6 +372,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
+    /// <summary>Verifies that EditPostAsync maps the title and content from the DTO.</summary>
     [Fact]
     public async Task EditPostAsync_MapsTitleAndContent_FromDto()
     {
@@ -376,6 +399,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
+    /// <summary>Verifies that EditPostAsync does not change the publish date, author, or author Id.</summary>
     [Fact]
     public async Task EditPostAsync_DoesNotChange_PublishDateAuthorOrAuthorId()
     {
@@ -404,6 +428,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
+    /// <summary>Verifies that EditPostAsync with an existing Id returns true.</summary>
     [Fact]
     public async Task EditPostAsync_WithExistingId_ReturnsTrue()
     {
@@ -423,6 +448,7 @@ public class PostServiceTests
         Assert.True(result);
     }
 
+    /// <summary>Verifies that EditPostAsync with a non-existing Id returns false.</summary>
     [Fact]
     public async Task EditPostAsync_WithNonExistingId_ReturnsFalse()
     {
@@ -438,6 +464,7 @@ public class PostServiceTests
         Assert.False(result);
     }
 
+    /// <summary>Verifies that EditPostAsync with a non-existing Id does not call ReplaceOneAsync.</summary>
     [Fact]
     public async Task EditPostAsync_WithNonExistingId_DoesNotCallReplaceOneAsync()
     {
@@ -453,6 +480,7 @@ public class PostServiceTests
         _postRepositoryMock.Verify(p => p.ReplaceOneAsync(It.IsAny<string>(), It.IsAny<Post>()), Times.Never);
     }
 
+    /// <summary>Verifies that EditPostAsync when the repository fails to replace the document returns false.</summary>
     [Fact]
     public async Task EditPostAsync_WhenRepositoryFailsToReplace_ReturnsFalse()
     {
