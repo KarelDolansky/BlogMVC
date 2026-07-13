@@ -7,8 +7,6 @@ using BlogMVC.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using MongoDB.Driver;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 // Application entry point (minimal hosting model). Wires up the DI container,
 // the middleware pipeline, and starts the web server.
@@ -44,12 +42,6 @@ builder.Services.AddSingleton(new MongoClient(connectionStringMongoDb));
 builder.Services.AddSingleton<IPostService, PostService>();
 builder.Services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 builder.Services.AddSingleton<IPostRepository, PostRepository>();
-
-// YAML deserializer (e.g. for data/config import) with camelCase naming and tolerance for unknown fields.
-builder.Services.AddSingleton(new DeserializerBuilder()
-    .WithNamingConvention(CamelCaseNamingConvention.Instance)
-    .IgnoreUnmatchedProperties()
-    .Build());
 
 var app = builder.Build();
 
