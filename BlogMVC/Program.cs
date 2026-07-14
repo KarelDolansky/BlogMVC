@@ -1,3 +1,4 @@
+using System.Text;
 using BlogMVC.Data;
 using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Infrastructure.Providers;
@@ -6,6 +7,7 @@ using BlogMVC.Models;
 using BlogMVC.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using MongoDB.Driver;
 
 // Application entry point (minimal hosting model). Wires up the DI container,
@@ -26,6 +28,22 @@ builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
     .AddEntityFrameworkStores<ApplicationDbContext>();
 
+builder.Services.AddAuthentication()
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(
+                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+        };
+    });
+
 // MVC controllers + views; Razor Runtime Compilation allows editing .cshtml files without a rebuild.
 builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();
 
@@ -42,6 +60,7 @@ builder.Services.AddSingleton(new MongoClient(connectionStringMongoDb));
 builder.Services.AddSingleton<IPostService, PostService>();
 builder.Services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 builder.Services.AddSingleton<IPostRepository, PostRepository>();
+builder.Services.AddSingleton<ITokenService, TokenService>();
 
 var app = builder.Build();
 
