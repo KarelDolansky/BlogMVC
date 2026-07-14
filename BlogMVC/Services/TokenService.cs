@@ -7,8 +7,14 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace BlogMVC.Services;
 
+/// <summary>
+/// Default <see cref="ITokenService"/> implementation. Issues HMAC-SHA256 signed JWTs
+/// using the "Jwt:Key" / "Jwt:Issuer" / "Jwt:Audience" configuration values, which must
+/// be present in configuration (e.g. appsettings.json) or token creation will fail.
+/// </summary>
 public class TokenService(IConfiguration configuration, IDateTimeProvider dateTimeProvider) : ITokenService
 {
+    /// <inheritdoc />
     public string CreateToken(IdentityUser user)
     {
         var claims = new List<Claim>
