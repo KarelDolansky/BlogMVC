@@ -1,5 +1,7 @@
 using BlogMVC.Models;
 using BlogMVC.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BlogMVC.Controllers;
@@ -46,9 +48,15 @@ public class BlogController(IPostService postService) : BaseApiController
     /// instead of the hard-coded "default" author.
     /// </summary>
     [HttpPost]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<Post>> CreatePost(CreatePostDto createPostDto)
     {
-        var created = await postService.AddPostAsync(createPostDto, "default", "default"); //TODO: Authorized;
+        var userId = GetUserId();
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        var userName = GetUserName();
+        if (string.IsNullOrEmpty(userName)) return Unauthorized();
+
+        var created = await postService.AddPostAsync(createPostDto, userId, userName);
         return CreatedAtRoute("GetPost", new { id = created.Id }, created);
     }
 
@@ -57,9 +65,15 @@ public class BlogController(IPostService postService) : BaseApiController
     /// TODO: no authorization check – same as <see cref="CreatePost"/>, needs [Authorize] and a real author.
     /// </summary>
     [HttpPost("bulk")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<IReadOnlyList<Post>>> BulkCreatePosts(List<CreatePostDto> createPostDtoes)
     {
-        var created = await postService.AddBulkPostAsync(createPostDtoes, "default", "default"); //TODO: Authorized;
+        var userId = GetUserId();
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        var userName = GetUserName();
+        if (string.IsNullOrEmpty(userName)) return Unauthorized();
+
+        var created = await postService.AddBulkPostAsync(createPostDtoes, userId, userName);
         return StatusCode(StatusCodes.Status201Created, created);
     }
 
@@ -69,9 +83,18 @@ public class BlogController(IPostService postService) : BaseApiController
     /// the caller is the post's author (see <see cref="PostController.Edit(string, EditPostDto)"/> for the pattern).
     /// </summary>
     [HttpPut("{id}")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult> EditPost(string id, EditPostDto editPostDto)
     {
         if (!IsValidObjectId(id)) return BadRequest("Invalid post ID.");
+
+        var userId = GetUserId();
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        var post = await postService.GetPostAsync(id);
+        if (post == null) return NotFound();
+        if (post.AuthorId != userId) return Forbid();
+
         if (!await postService.EditPostAsync(id, editPostDto)) return NotFound("Post not found.");
         return NoContent();
     }
@@ -82,9 +105,18 @@ public class BlogController(IPostService postService) : BaseApiController
     /// the caller is the post's author (see <see cref="PostController.DeletePost"/> for the pattern).
     /// </summary>
     [HttpDelete("{id}")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult> DeletePost(string id)
     {
         if (!IsValidObjectId(id)) return BadRequest("Invalid post ID.");
+
+        var userId = GetUserId();
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        var post = await postService.GetPostAsync(id);
+        if (post == null) return NotFound();
+        if (post.AuthorId != userId) return Forbid();
+
         if (!await postService.DeletePostAsync(id)) return NotFound("Post not found.");
         return NoContent();
     }
