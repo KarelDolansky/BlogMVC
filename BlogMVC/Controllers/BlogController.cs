@@ -1,5 +1,7 @@
 using BlogMVC.Models;
 using BlogMVC.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BlogMVC.Controllers;
@@ -7,19 +9,16 @@ namespace BlogMVC.Controllers;
 /// <summary>
 /// REST Web API for blog posts (JSON), available at "api/blog".
 /// Complements the MVC controller <see cref="PostController"/>, which serves the web UI.
-/// WARNING: none of the endpoints in this controller are protected by <c>[Authorize]</c> —
-/// anyone can read, create, edit, or delete posts through this API. The create endpoints
-/// also hard-code the author as "default" instead of using an authenticated identity.
-/// This must be fixed with proper authorization before this API is used in production.
+/// Reading posts (<see cref="GetPosts"/>, <see cref="GetPost"/>) is public by design.
+/// Creating, editing, deleting, and bulk-creating posts require a valid JWT bearer token
+/// (see <see cref="AuthController.Login"/> to obtain one); editing/deleting additionally
+/// require the caller to be the post's author, mirroring the checks in <see cref="PostController"/>.
 /// </summary>
 [Route("api/[controller]")]
 [ApiController]
 public class BlogController(IPostService postService) : BaseApiController
 {
-    /// <summary>
-    /// GET api/blog – returns all posts as a JSON array.
-    /// TODO: currently public/unauthenticated by design (read access) – confirm this is intended before production.
-    /// </summary>
+    /// <summary>GET api/blog – returns all posts as a JSON array. Public, no authentication required.</summary>
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<Post>>> GetPosts()
     {
@@ -27,9 +26,8 @@ public class BlogController(IPostService postService) : BaseApiController
     }
 
     /// <summary>
-    /// GET api/blog/{id} – returns a single post by Id.
+    /// GET api/blog/{id} – returns a single post by Id. Public, no authentication required.
     /// The named route "GetPost" is used in <see cref="CreatePost"/> to build the Location header.
-    /// TODO: currently public/unauthenticated by design (read access) – confirm this is intended before production.
     /// </summary>
     [HttpGet("{id}", Name = "GetPost")]
     public async Task<ActionResult<Post>> GetPost(string id)
@@ -41,50 +39,81 @@ public class BlogController(IPostService postService) : BaseApiController
     }
 
     /// <summary>
-    /// POST api/blog – creates a new post.
-    /// TODO: no authorization check – add [Authorize] and use the authenticated user's Id/name
-    /// instead of the hard-coded "default" author.
+    /// POST api/blog – creates a new post. Requires a valid JWT bearer token; the author is
+    /// taken from the token's claims (see <see cref="BaseApiController.GetUserId"/>/<see cref="BaseApiController.GetUserName"/>).
     /// </summary>
     [HttpPost]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<Post>> CreatePost(CreatePostDto createPostDto)
     {
-        var created = await postService.AddPostAsync(createPostDto, "default", "default"); //TODO: Authorized;
+        var userId = GetUserId();
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        var userName = GetUserName();
+        if (string.IsNullOrEmpty(userName)) return Unauthorized();
+
+        var created = await postService.AddPostAsync(createPostDto, userId, userName);
         return CreatedAtRoute("GetPost", new { id = created.Id }, created);
     }
 
     /// <summary>
-    /// POST api/blog/bulk – bulk-creates multiple posts at once with the same (still hard-coded) author.
-    /// TODO: no authorization check – same as <see cref="CreatePost"/>, needs [Authorize] and a real author.
+    /// POST api/blog/bulk – bulk-creates multiple posts at once, all authored by the caller
+    /// (same JWT requirement as <see cref="CreatePost"/>).
     /// </summary>
     [HttpPost("bulk")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult<IReadOnlyList<Post>>> BulkCreatePosts(List<CreatePostDto> createPostDtoes)
     {
-        var created = await postService.AddBulkPostAsync(createPostDtoes, "default", "default"); //TODO: Authorized;
+        var userId = GetUserId();
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+        var userName = GetUserName();
+        if (string.IsNullOrEmpty(userName)) return Unauthorized();
+
+        var created = await postService.AddBulkPostAsync(createPostDtoes, userId, userName);
         return StatusCode(StatusCodes.Status201Created, created);
     }
 
     /// <summary>
-    /// PUT api/blog/{id} – updates an existing post. Returns 400 for an invalid Id, 404 if the post doesn't exist.
-    /// TODO: no authorization check at all – any caller can edit any post. Add [Authorize] and verify
-    /// the caller is the post's author (see <see cref="PostController.Edit(string, EditPostDto)"/> for the pattern).
+    /// PUT api/blog/{id} – updates an existing post. Requires a valid JWT bearer token and that
+    /// the caller is the post's author (403 Forbid otherwise). Returns 400 for an invalid Id,
+    /// 404 if the post doesn't exist. Mirrors the ownership check in
+    /// <see cref="PostController.Edit(string, EditPostDto)"/>.
     /// </summary>
     [HttpPut("{id}")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult> EditPost(string id, EditPostDto editPostDto)
     {
         if (!IsValidObjectId(id)) return BadRequest("Invalid post ID.");
+
+        var userId = GetUserId();
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        var post = await postService.GetPostAsync(id);
+        if (post == null) return NotFound();
+        if (post.AuthorId != userId) return Forbid();
+
         if (!await postService.EditPostAsync(id, editPostDto)) return NotFound("Post not found.");
         return NoContent();
     }
 
     /// <summary>
-    /// DELETE api/blog/{id} – deletes a post. Returns 400 for an invalid Id, 404 if the post doesn't exist.
-    /// TODO: no authorization check at all – any caller can delete any post. Add [Authorize] and verify
-    /// the caller is the post's author (see <see cref="PostController.DeletePost"/> for the pattern).
+    /// DELETE api/blog/{id} – deletes a post. Requires a valid JWT bearer token and that the
+    /// caller is the post's author (403 Forbid otherwise). Returns 400 for an invalid Id,
+    /// 404 if the post doesn't exist. Mirrors the ownership check in
+    /// <see cref="PostController.DeletePost"/>.
     /// </summary>
     [HttpDelete("{id}")]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
     public async Task<ActionResult> DeletePost(string id)
     {
         if (!IsValidObjectId(id)) return BadRequest("Invalid post ID.");
+
+        var userId = GetUserId();
+        if (string.IsNullOrEmpty(userId)) return Unauthorized();
+
+        var post = await postService.GetPostAsync(id);
+        if (post == null) return NotFound();
+        if (post.AuthorId != userId) return Forbid();
+
         if (!await postService.DeletePostAsync(id)) return NotFound("Post not found.");
         return NoContent();
     }

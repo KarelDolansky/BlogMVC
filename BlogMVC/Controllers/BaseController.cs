@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using BlogMVC.Helpers;
 using Microsoft.AspNetCore.Mvc;
 
@@ -14,8 +13,8 @@ public class BaseController : Controller
     protected bool IsValidObjectId(string id) => MongoDbHelper.IsValidObjectId(id);
 
     /// <summary>Returns the Id of the currently logged-in user (NameIdentifier claim), or null if not authenticated.</summary>
-    protected string? GetUserId() => User.FindFirstValue(ClaimTypes.NameIdentifier);
+    protected string? GetUserId() => User.GetUserId();
 
     /// <summary>Returns the username of the currently logged-in user (Name claim), or null if not authenticated.</summary>
-    protected string? GetUserName() => User.FindFirstValue(ClaimTypes.Name);
+    protected string? GetUserName() => User.GetUserName();
 }
