@@ -1,42 +1,23 @@
 using System.Net;
 using BlogMVC.Infrastructure.Interfaces;
-using BlogMVC.Models;
 using BlogMVC.Tests.Helpers;
-using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Options;
-using MongoDB.Driver;
 
 namespace BlogMVC.Tests.IntegrationTests;
 
-public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactory<Program>>, IAsyncLifetime
+/// <summary>
+/// Integration tests for <see cref="PostController"/> against the real app (via an HTTP client from
+/// <see cref="WebApplicationFactory{Program}"/>) and a real MongoDB instance. Verify the behavior of the
+/// whole request including authorization (authenticated/unauthenticated client) and HTTP status codes.
+/// </summary>
+[Collection("PostController")]
+public class PostControllerIntegrationTests(WebApplicationFactory<Program> factory)
+    : PostControllerTestBase(factory)
 {
-    private static readonly DateTime DefaultDate = new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-    private readonly HttpClient _client;
-    private readonly string _defaultId = "507f1f77bcf86cd799439011";
-    private readonly WebApplicationFactory<Program> _factory;
-
-    public PostControllerIntegrationTests(WebApplicationFactory<Program> factory)
-    {
-        _factory = factory.WithWebHostBuilder(builder =>
-            builder.UseEnvironment("Testing"));
-        _client = _factory.CreateClient();
-    }
-
-    public async Task InitializeAsync()
-    {
-        var client = _factory.Services.GetRequiredService<MongoClient>();
-        var settings = _factory.Services.GetRequiredService<IOptions<MongoDbSettings>>();
-        var database = client.GetDatabase(settings.Value.DatabaseName);
-        var posts = database.GetCollection<Post>(settings.Value.PostsCollectionName);
-        await posts.DeleteManyAsync(_ => true);
-    }
-
-    public Task DisposeAsync() => Task.CompletedTask;
-
     // ---------- Details ----------
 
+    /// <summary>Verifies that Details with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Details_WithInvalidPostId_ReturnsNotFound()
     {
@@ -44,128 +25,44 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
         var id = "wrongPostId";
 
         // Act
-        var response = await _client.GetAsync($"/Post/Details/{id}/");
+        var response = await Client.GetAsync($"/Post/Details/{id}/");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Details when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Details_NotFoundPost_ReturnsNotFound()
     {
         // Arrange
-        var id = _defaultId;
+        var id = DefaultId;
 
         // Act
-        var response = await _client.GetAsync($"/Post/Details/{id}");
+        var response = await Client.GetAsync($"/Post/Details/{id}");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    [Fact]
-    public async Task Details_WithValidPost_ReturnsView()
-    {
-        // Arrange
-        var post = new PostFactory()
-            .WithId(_defaultId)
-            .WithTitle("Test Title")
-            .Build();
-
-        var repository = _factory.Services.GetRequiredService<IPostRepository>();
-        await repository.InsertOneAsync(post);
-
-        // Act
-        var response = await _client.GetAsync($"/Post/Details/{post.Id}");
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Test Title", content);
-        Assert.Contains("AuthorDefault", content);
-        Assert.Contains($"/Post/Edit/{_defaultId}", content);
-        Assert.Contains($"/Post/Delete/{_defaultId}", content);
-    }
-
-    [Fact]
-    public async Task Details_WithModifiedPost_ShowsModifiedDate()
-    {
-        // Arrange
-        var post = new PostFactory()
-            .WithId(_defaultId)
-            .WithTitle("Test Title")
-            .WithPublishDate(DefaultDate)
-            .WithModifiedDate(DefaultDate.AddDays(1))
-            .Build();
-
-        var repository = _factory.Services.GetRequiredService<IPostRepository>();
-        await repository.InsertOneAsync(post);
-
-        // Act
-        var response = await _client.GetAsync($"/Post/Details/{post.Id}");
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains(DefaultDate.AddDays(1).ToString("dd/MM/yyyy"), content);
-    }
-
     // ---------- Create GET ----------
 
+    /// <summary>Verifies that Create without authentication returns Unauthorized.</summary>
     [Fact]
-    public async Task Create_ReturnsView()
+    public async Task Create_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Act
-        var response = await _client.GetAsync("/Post/Create");
+        var response = await Client.GetAsync("/Post/Create");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     // ---------- Create POST ----------
 
+    /// <summary>Verifies that Create (POST) without authentication returns Unauthorized.</summary>
     [Fact]
-    public async Task Create_POST_WithInvalidTitle_ReturnsView()
-    {
-        // Arrange
-        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "Title", "" },
-            { "Content", "Test Content" }
-        });
-
-        // Act
-        var response = await _client.PostAsync("/Post/Create", formData);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Test Content", content);
-        Assert.Contains("The Title field is required.", content);
-    }
-
-    [Fact]
-    public async Task Create_POST_WithInvalidContent_ReturnsView()
-    {
-        // Arrange
-        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "Title", "Test Title" },
-            { "Content", "" }
-        });
-
-        // Act
-        var response = await _client.PostAsync("/Post/Create", formData);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Test Title", content);
-        Assert.Contains("The Content field is required.", content);
-    }
-
-    [Fact]
-    public async Task Create_POST_WithValidContent_ReturnsDetailsView()
+    public async Task Create_POST_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Arrange
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
@@ -175,128 +72,111 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
         });
 
         // Act
-        var response = await _client.PostAsync("/Post/Create", formData);
+        var response = await Client.PostAsync("/Post/Create", formData);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Test Title", content);
-        Assert.Contains("Test Content", content);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
     // ---------- Edit GET ----------
 
+    /// <summary>Verifies that Edit with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Edit_WithInvalidPostId_ReturnsNotFound()
     {
         // Arrange
         var id = "wrongPostId";
+        var client = CreateAuthenticatedClient(OwnerId);
 
         // Act
-        var response = await _client.GetAsync($"/Post/Edit/{id}");
+        var response = await client.GetAsync($"/Post/Edit/{id}");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Edit when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Edit_NotFoundPost_ReturnsNotFound()
     {
         // Arrange
-        var id = _defaultId;
+        var id = DefaultId;
+        var client = CreateAuthenticatedClient(OwnerId);
 
         // Act
-        var response = await _client.GetAsync($"/Post/Edit/{id}");
+        var response = await client.GetAsync($"/Post/Edit/{id}");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Edit without authentication returns Unauthorized.</summary>
     [Fact]
-    public async Task Edit_ReturnsView()
+    public async Task Edit_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Arrange
         var post = new PostFactory()
-            .WithId(_defaultId)
-            .WithTitle("Test Title")
-            .WithContent("Test Content")
+            .WithId(DefaultId)
+            .WithAuthorId(OwnerId)
             .Build();
 
-        var repository = _factory.Services.GetRequiredService<IPostRepository>();
+        var repository = Factory.Services.GetRequiredService<IPostRepository>();
         await repository.InsertOneAsync(post);
 
         // Act
-        var response = await _client.GetAsync($"/Post/Edit/{post.Id}");
+        var response = await Client.GetAsync($"/Post/Edit/{post.Id}");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Test Title", content);
-        Assert.Contains("Test Content", content);
-        Assert.Contains($"/Post/Details/{post.Id}", content);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>Verifies that Edit when a different user than the author is logged in returns Forbidden.</summary>
+    [Fact]
+    public async Task Edit_WithDifferentAuthor_ReturnsForbidden()
+    {
+        // Arrange
+        var post = new PostFactory()
+            .WithId(DefaultId)
+            .WithAuthorId(OwnerId)
+            .Build();
+
+        var repository = Factory.Services.GetRequiredService<IPostRepository>();
+        await repository.InsertOneAsync(post);
+
+        var client = CreateAuthenticatedClient(OtherUserId);
+
+        // Act
+        var response = await client.GetAsync($"/Post/Edit/{post.Id}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     // ---------- Edit POST ----------
 
+    /// <summary>Verifies that Edit (POST) with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Edit_POST_WithInvalidPostId_ReturnsNotFound()
     {
         // Arrange
         var id = "wrongPostId";
+        var client = CreateAuthenticatedClient(OwnerId);
 
         // Act
-        var response = await _client.PostAsync($"/Post/Edit/{id}",
+        var response = await client.PostAsync($"/Post/Edit/{id}",
             new FormUrlEncodedContent(new Dictionary<string, string>()));
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Edit (POST) when the post does not exist returns NotFound.</summary>
     [Fact]
-    public async Task Edit_POST_WithInvalidTitle_ReturnsView()
+    public async Task Edit_POST_NotFoundPost_ReturnsNotFound()
     {
-        // Arrange
-        var id = _defaultId;
-        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "Title", "" },
-            { "Content", "Test Content" }
-        });
-
-        // Act
-        var response = await _client.PostAsync($"/Post/Edit/{id}", formData);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Test Content", content);
-    }
-
-    [Fact]
-    public async Task Edit_POST_WithInvalidContent_ReturnsView()
-    {
-        // Arrange
-        var id = _defaultId;
-        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "Title", "Test Title" },
-            { "Content", "" }
-        });
-
-        // Act
-        var response = await _client.PostAsync($"/Post/Edit/{id}", formData);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Test Title", content);
-    }
-
-    [Fact]
-    public async Task Edit_POST_NotFoundPost_ReturnsView()
-    {
-        // Arrange
-        var id = _defaultId;
+        // Arrange: no post is inserted, so the controller's post lookup must return 404.
+        var id = DefaultId;
+        var client = CreateAuthenticatedClient(OwnerId);
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "Test Title" },
@@ -304,29 +184,44 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
         });
 
         // Act
-        var response = await _client.PostAsync($"/Post/Edit/{id}", formData);
+        var response = await client.PostAsync($"/Post/Edit/{id}", formData);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Test Title", content);
-        Assert.Contains("Test Content", content);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Edit (POST) without authentication returns Unauthorized.</summary>
     [Fact]
-    public async Task Edit_POST_ReturnsView()
+    public async Task Edit_POST_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Arrange
-        var id = _defaultId;
+        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "Title", "Test Title" },
+            { "Content", "Test Content" }
+        });
+
+        // Act
+        var response = await Client.PostAsync($"/Post/Edit/{DefaultId}", formData);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>Verifies that Edit (POST) when a different user than the author is logged in returns Forbidden.</summary>
+    [Fact]
+    public async Task Edit_POST_WithDifferentAuthor_ReturnsForbidden()
+    {
+        // Arrange
         var post = new PostFactory()
-            .WithId(_defaultId)
-            .WithTitle("Test Title2")
-            .WithContent("Test Content2")
+            .WithId(DefaultId)
+            .WithAuthorId(OwnerId)
             .Build();
 
-        var repository = _factory.Services.GetRequiredService<IPostRepository>();
+        var repository = Factory.Services.GetRequiredService<IPostRepository>();
         await repository.InsertOneAsync(post);
 
+        var client = CreateAuthenticatedClient(OtherUserId);
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "Test Title" },
@@ -334,117 +229,175 @@ public class PostControllerIntegrationTests : IClassFixture<WebApplicationFactor
         });
 
         // Act
-        var response = await _client.PostAsync($"/Post/Edit/{id}", formData);
+        var response = await client.PostAsync($"/Post/Edit/{post.Id}", formData);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Test Title", content);
-        Assert.Contains("Test Content", content);
-        Assert.Contains("AuthorDefault", content);
-        Assert.Contains($"/Post/Edit/{_defaultId}", content);
-        Assert.Contains($"/Post/Delete/{_defaultId}", content);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     // ---------- Delete GET ----------
 
+    /// <summary>Verifies that Delete with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Delete_WithInvalidPostId_ReturnsNotFound()
     {
         // Arrange
         var id = "wrongPostId";
+        var client = CreateAuthenticatedClient(OwnerId);
 
         // Act
-        var response = await _client.GetAsync($"/Post/Delete/{id}");
+        var response = await client.GetAsync($"/Post/Delete/{id}");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Delete when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Delete_NotFoundPost_ReturnsNotFound()
     {
         // Arrange
-        var id = _defaultId;
+        var id = DefaultId;
+        var client = CreateAuthenticatedClient(OwnerId);
 
         // Act
-        var response = await _client.GetAsync($"/Post/Delete/{id}");
+        var response = await client.GetAsync($"/Post/Delete/{id}");
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Delete without authentication returns Unauthorized.</summary>
     [Fact]
-    public async Task Delete_ReturnsView()
+    public async Task Delete_WithoutAuthentication_ReturnsUnauthorized()
     {
         // Arrange
         var post = new PostFactory()
-            .WithId(_defaultId)
-            .WithTitle("Test Title")
-            .WithContent("Test Content")
+            .WithId(DefaultId)
+            .WithAuthorId(OwnerId)
             .Build();
 
-        var repository = _factory.Services.GetRequiredService<IPostRepository>();
+        var repository = Factory.Services.GetRequiredService<IPostRepository>();
         await repository.InsertOneAsync(post);
 
         // Act
-        var response = await _client.GetAsync($"/Post/Delete/{post.Id}");
+        var response = await Client.GetAsync($"/Post/Delete/{post.Id}");
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var content = await response.Content.ReadAsStringAsync();
-        Assert.Contains("Test Title", content);
-        Assert.Contains("AuthorDefault", content);
-        Assert.Contains($"/Post/Delete/{_defaultId}", content);
-        Assert.Contains($"/Post/Details/{post.Id}", content);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>Verifies that Delete when a different user than the author is logged in returns Forbidden.</summary>
+    [Fact]
+    public async Task Delete_WithDifferentAuthor_ReturnsForbidden()
+    {
+        // Arrange
+        var post = new PostFactory()
+            .WithId(DefaultId)
+            .WithAuthorId(OwnerId)
+            .Build();
+
+        var repository = Factory.Services.GetRequiredService<IPostRepository>();
+        await repository.InsertOneAsync(post);
+
+        var client = CreateAuthenticatedClient(OtherUserId);
+
+        // Act
+        var response = await client.GetAsync($"/Post/Delete/{post.Id}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     // ---------- Delete POST ----------
 
+    /// <summary>Verifies that Delete (POST) with an invalid post Id returns NotFound.</summary>
     [Fact]
     public async Task Delete_POST_WithInvalidPostId_ReturnsNotFound()
     {
         // Arrange
         var id = "wrongPostId";
+        var client = CreateAuthenticatedClient(OwnerId);
 
         // Act
-        var response = await _client.PostAsync($"/Post/Delete/{id}",
+        var response = await client.PostAsync($"/Post/Delete/{id}",
             new FormUrlEncodedContent(new Dictionary<string, string>()));
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Delete (POST) when the post does not exist returns NotFound.</summary>
     [Fact]
     public async Task Delete_POST_NotFoundPost_ReturnsNotFound()
     {
         // Arrange
-        var id = _defaultId;
+        var id = DefaultId;
+        var client = CreateAuthenticatedClient(OwnerId);
 
         // Act
-        var response = await _client.PostAsync($"/Post/Delete/{id}",
+        var response = await client.PostAsync($"/Post/Delete/{id}",
             new FormUrlEncodedContent(new Dictionary<string, string>()));
 
         // Assert
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that Delete (POST) returns a View.</summary>
     [Fact]
     public async Task Delete_POST_ReturnsView()
     {
         // Arrange
         var post = new PostFactory()
-            .WithId(_defaultId)
+            .WithId(DefaultId)
+            .WithAuthorId(OwnerId)
             .Build();
 
-        var repository = _factory.Services.GetRequiredService<IPostRepository>();
+        var repository = Factory.Services.GetRequiredService<IPostRepository>();
         await repository.InsertOneAsync(post);
 
+        var client = CreateAuthenticatedClient(OwnerId);
+
         // Act
-        var response = await _client.PostAsync($"/Post/Delete/{post.Id}",
+        var response = await client.PostAsync($"/Post/Delete/{post.Id}",
             new FormUrlEncodedContent(new Dictionary<string, string>()));
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    /// <summary>Verifies that Delete (POST) without authentication returns Unauthorized.</summary>
+    [Fact]
+    public async Task Delete_POST_WithoutAuthentication_ReturnsUnauthorized()
+    {
+        // Act
+        var response = await Client.PostAsync($"/Post/Delete/{DefaultId}",
+            new FormUrlEncodedContent(new Dictionary<string, string>()));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>Verifies that Delete (POST) when a different user than the author is logged in returns Forbidden.</summary>
+    [Fact]
+    public async Task Delete_POST_WithDifferentAuthor_ReturnsForbidden()
+    {
+        // Arrange
+        var post = new PostFactory()
+            .WithId(DefaultId)
+            .WithAuthorId(OwnerId)
+            .Build();
+
+        var repository = Factory.Services.GetRequiredService<IPostRepository>();
+        await repository.InsertOneAsync(post);
+
+        var client = CreateAuthenticatedClient(OtherUserId);
+
+        // Act
+        var response = await client.PostAsync($"/Post/Delete/{post.Id}",
+            new FormUrlEncodedContent(new Dictionary<string, string>()));
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 }
