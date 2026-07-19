@@ -6,9 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 namespace BlogMVC.Controllers;
 
 /// <summary>
-/// MVC controller for CRUD operations on blog posts through the web UI (Razor views).
-/// Post details are public; creating/editing/deleting require the user to be logged in
-/// and to own the post (AuthorId is checked against the logged-in user).
+///     MVC controller for CRUD operations on blog posts through the web UI (Razor views).
+///     Post details are public; creating/editing/deleting require the user to be logged in
+///     and to own the post (AuthorId is checked against the logged-in user).
 /// </summary>
 public class PostController(IPostService postService) : BaseController
 {
@@ -29,8 +29,8 @@ public class PostController(IPostService postService) : BaseController
     }
 
     /// <summary>
-    /// Handles the submitted "create post" form. The currently logged-in user (from the
-    /// identity claims) becomes the author. Redirects to the details page on success.
+    ///     Handles the submitted "create post" form. The currently logged-in user (from the
+    ///     identity claims) becomes the author. Redirects to the details page on success.
     /// </summary>
     [Authorize]
     [HttpPost]
@@ -48,8 +48,8 @@ public class PostController(IPostService postService) : BaseController
     }
 
     /// <summary>
-    /// Shows the edit form, pre-filled with the post's current title and content.
-    /// Requires the user to be logged in and to be the post's author (otherwise 403 Forbid).
+    ///     Shows the edit form, pre-filled with the post's current title, description and content.
+    ///     Requires the user to be logged in and to be the post's author (otherwise 403 Forbid).
     /// </summary>
     [Authorize]
     public async Task<IActionResult> Edit(string id)
@@ -66,14 +66,15 @@ public class PostController(IPostService postService) : BaseController
         var editPostDto = new EditPostDto
         {
             Title = post.Title,
-            Content = post.Content
+            Content = post.Content,
+            Description = post.Description
         };
         return View(editPostDto);
     }
 
     /// <summary>
-    /// Handles the submitted "edit post" form. Requires the user to be logged in and to be the author.
-    /// Returns the form again on validation failure or a failed update, otherwise redirects to details.
+    ///     Handles the submitted "edit post" form. Requires the user to be logged in and to be the author.
+    ///     Returns the form again on validation failure or a failed update, otherwise redirects to details.
     /// </summary>
     [Authorize]
     [HttpPost]
@@ -95,7 +96,7 @@ public class PostController(IPostService postService) : BaseController
     }
 
     /// <summary>
-    /// Shows the confirmation page for deleting a post. Requires the user to be logged in and to be the author.
+    ///     Shows the confirmation page for deleting a post. Requires the user to be logged in and to be the author.
     /// </summary>
     [Authorize]
     public async Task<IActionResult> Delete(string id)
@@ -113,9 +114,9 @@ public class PostController(IPostService postService) : BaseController
     }
 
     /// <summary>
-    /// Confirmed post deletion (POST). Mapped to the "Delete" action via <see cref="ActionNameAttribute"/>
-    /// so the form on the confirmation page can post to the same action URL as the GET Delete.
-    /// Redirects to the home page after a successful deletion.
+    ///     Confirmed post deletion (POST). Mapped to the "Delete" action via <see cref="ActionNameAttribute" />
+    ///     so the form on the confirmation page can post to the same action URL as the GET Delete.
+    ///     Redirects to the home page after a successful deletion.
     /// </summary>
     [Authorize]
     [HttpPost]

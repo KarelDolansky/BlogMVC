@@ -7,13 +7,13 @@ using Moq;
 namespace BlogMVC.Tests.Services;
 
 /// <summary>
-/// Unit tests for <see cref="PostService"/> using a mocked <see cref="IPostRepository"/> and
-/// <see cref="IDateTimeProvider"/>. Verify correct mapping from DTOs to the <see cref="Post"/> entity,
-/// timestamp assignment, and delegation of calls to the repository.
+///     Unit tests for <see cref="PostService" /> using a mocked <see cref="IPostRepository" /> and
+///     <see cref="IDateTimeProvider" />. Verify correct mapping from DTOs to the <see cref="Post" /> entity,
+///     timestamp assignment, and delegation of calls to the repository.
 /// </summary>
 public class PostServiceTests
 {
-    static readonly DateTime DefaultDate = new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime DefaultDate = new(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private readonly Mock<IDateTimeProvider> _dateTimeProviderMock;
     private readonly string _defaultAuthor = "defaultAuthor";
     private readonly string _defaultAuthorId = "defaultAuthorId";
@@ -63,7 +63,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
-    /// <summary>Verifies that AddPostAsync maps the title and content from the DTO.</summary>
+    /// <summary>Verifies that AddPostAsync maps the title, description and content from the DTO.</summary>
     [Fact]
     public async Task AddPostAsync_MapsTitleAndContent_FromDto()
     {
@@ -72,6 +72,7 @@ public class PostServiceTests
 
         var createPostDto = new CreatePostDtoFactory()
             .WithTitle("Title1")
+            .WithDescription("Description1")
             .WithContent("Content1")
             .Build();
 
@@ -81,6 +82,7 @@ public class PostServiceTests
         // Assert
         _postRepositoryMock.Verify(p => p.InsertOneAsync(It.Is<Post>(post =>
             post.Title == "Title1" &&
+            post.Description == "Description1" &&
             post.Content == "Content1"
         )), Times.Once);
     }
@@ -112,12 +114,14 @@ public class PostServiceTests
         _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
 
         var createPostDto = new CreatePostDtoFactory()
-            .WithTitle("Title")
-            .WithContent("Content")
+            .WithTitle("Title1")
+            .WithDescription("Description1")
+            .WithContent("Content1")
             .Build();
         var insertedPost = new PostFactory()
-            .WithTitle("Title")
-            .WithContent("Content")
+            .WithTitle("Title1")
+            .WithDescription("Description1")
+            .WithContent("Content1")
             .Build();
 
         _postRepositoryMock
@@ -143,7 +147,7 @@ public class PostServiceTests
         var createPostDtoes = new List<CreatePostDto>
         {
             new CreatePostDtoFactory().WithTitle("Title1").WithContent("Content1").Build(),
-            new CreatePostDtoFactory().WithTitle("Title2").WithContent("Content2").Build(),
+            new CreatePostDtoFactory().WithTitle("Title2").WithContent("Content2").Build()
         };
 
         // Act
@@ -156,7 +160,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
-    /// <summary>Verifies that AddBulkPostAsync maps the title and content for each DTO.</summary>
+    /// <summary>Verifies that AddBulkPostAsync maps the title, description and content for each DTO.</summary>
     [Fact]
     public async Task AddBulkPostAsync_MapsTitleAndContent_ForEachDto()
     {
@@ -165,8 +169,10 @@ public class PostServiceTests
 
         var createPostDtoes = new List<CreatePostDto>
         {
-            new CreatePostDtoFactory().WithTitle("Title1").WithContent("Content1").Build(),
-            new CreatePostDtoFactory().WithTitle("Title2").WithContent("Content2").Build()
+            new CreatePostDtoFactory().WithTitle("Title1").WithDescription("Description1").WithContent("Content1")
+                .Build(),
+            new CreatePostDtoFactory().WithTitle("Title2").WithDescription("Description2").WithContent("Content2")
+                .Build()
         };
 
         // Act
@@ -174,8 +180,8 @@ public class PostServiceTests
 
         // Assert
         _postRepositoryMock.Verify(p => p.InsertManyAsync(It.Is<List<Post>>(posts =>
-            posts[0].Title == "Title1" && posts[0].Content == "Content1" &&
-            posts[1].Title == "Title2" && posts[1].Content == "Content2"
+            posts[0].Title == "Title1" && posts[0].Description == "Description1" && posts[0].Content == "Content1" &&
+            posts[1].Title == "Title2" && posts[1].Description == "Description2" && posts[1].Content == "Content2"
         )), Times.Once);
     }
 
@@ -226,12 +232,12 @@ public class PostServiceTests
 
         var createPostDtoes = new List<CreatePostDto>
         {
-            new CreatePostDtoFactory().WithTitle("Title1").WithContent("Content1").Build(),
+            new CreatePostDtoFactory().WithTitle("Title1").WithContent("Content1").Build()
         };
 
         var insertedPosts = new List<Post>
         {
-            new PostFactory().WithTitle("Title1").WithContent("Content1").Build(),
+            new PostFactory().WithTitle("Title1").WithContent("Content1").Build()
         };
 
         _postRepositoryMock
@@ -256,7 +262,7 @@ public class PostServiceTests
         {
             new PostFactory().WithTitle("Title1").WithContent("Content1").Build(),
             new PostFactory().WithTitle("Title2").WithContent("Content2").Build(),
-            new PostFactory().WithTitle("Title3").WithContent("Content3").Build(),
+            new PostFactory().WithTitle("Title3").WithContent("Content3").Build()
         };
         _postRepositoryMock.Setup(p => p.FindAllAsync()).ReturnsAsync(posts);
 
@@ -372,7 +378,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
-    /// <summary>Verifies that EditPostAsync maps the title and content from the DTO.</summary>
+    /// <summary>Verifies that EditPostAsync maps the title, description and content from the DTO.</summary>
     [Fact]
     public async Task EditPostAsync_MapsTitleAndContent_FromDto()
     {
@@ -381,6 +387,7 @@ public class PostServiceTests
 
         var editPostDto = new EditPostDtoFactory()
             .WithTitle("Title1")
+            .WithDescription("Description1")
             .WithContent("Content1")
             .Build();
 
@@ -395,6 +402,7 @@ public class PostServiceTests
         // Assert
         _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", It.Is<Post>(post1 =>
             post1.Title == "Title1" &&
+            post1.Description == "Description1" &&
             post1.Content == "Content1"
         )), Times.Once);
     }

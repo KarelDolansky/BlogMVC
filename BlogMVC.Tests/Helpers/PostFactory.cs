@@ -3,18 +3,19 @@ using BlogMVC.Models;
 namespace BlogMVC.Tests.Helpers;
 
 /// <summary>
-/// Test Data Builder (fluent factory) for creating <see cref="Post"/> instances in tests.
-/// Provides sensible defaults and "With..." methods to override only the fields
-/// a given test cares about.
+///     Test Data Builder (fluent factory) for creating <see cref="Post" /> instances in tests.
+///     Provides sensible defaults and "With..." methods to override only the fields
+///     a given test cares about.
 /// </summary>
 public class PostFactory
 {
-    private Post _entity = new Post
+    private readonly Post _entity = new()
     {
         Title = "Title",
+        Description = "Description",
         Content = "Content",
         AuthorId = "AuthorId",
-        Author = "Author",
+        Author = "Author"
     };
 
     /// <summary>Sets the post's Id.</summary>
@@ -28,6 +29,13 @@ public class PostFactory
     public PostFactory WithTitle(string title)
     {
         _entity.Title = title;
+        return this;
+    }
+
+    /// <summary>Sets the description.</summary>
+    public PostFactory WithDescription(string description)
+    {
+        _entity.Description = description;
         return this;
     }
 
@@ -66,7 +74,7 @@ public class PostFactory
         return this;
     }
 
-    /// <summary>Returns the built <see cref="Post"/> instance.</summary>
+    /// <summary>Returns the built <see cref="Post" /> instance.</summary>
     public Post Build()
     {
         return _entity;

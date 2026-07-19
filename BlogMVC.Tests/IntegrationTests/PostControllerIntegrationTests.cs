@@ -7,9 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 namespace BlogMVC.Tests.IntegrationTests;
 
 /// <summary>
-/// Integration tests for <see cref="PostController"/> against the real app (via an HTTP client from
-/// <see cref="WebApplicationFactory{Program}"/>) and a real MongoDB instance. Verify the behavior of the
-/// whole request including authorization (authenticated/unauthenticated client) and HTTP status codes.
+///     Integration tests for <see cref="PostController" /> against the real app (via an HTTP client from
+///     <see cref="WebApplicationFactory{Program}" />) and a real MongoDB instance. Verify the behavior of the
+///     whole request including authorization (authenticated/unauthenticated client) and HTTP status codes.
 /// </summary>
 [Collection("PostController")]
 public class PostControllerIntegrationTests(WebApplicationFactory<Program> factory)
@@ -180,6 +180,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "Test Title" },
+            { "Description", "Test Description" },
             { "Content", "Test Content" }
         });
 
@@ -198,6 +199,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "Test Title" },
+            { "Description", "Test Description" },
             { "Content", "Test Content" }
         });
 
@@ -225,6 +227,7 @@ public class PostControllerIntegrationTests(WebApplicationFactory<Program> facto
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "Test Title" },
+            { "Description", "Test Description" },
             { "Content", "Test Content" }
         });
 
