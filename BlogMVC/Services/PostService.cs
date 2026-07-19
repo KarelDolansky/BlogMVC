@@ -4,8 +4,8 @@ using BlogMVC.Models;
 namespace BlogMVC.Services;
 
 /// <summary>
-/// Default implementation of <see cref="IPostService"/>. Uses <see cref="IDateTimeProvider"/>
-/// for a testable timestamp and <see cref="IPostRepository"/> for persistence in MongoDB.
+///     Default implementation of <see cref="IPostService" />. Uses <see cref="IDateTimeProvider" />
+///     for a testable timestamp and <see cref="IPostRepository" /> for persistence in MongoDB.
 /// </summary>
 public class PostService(IDateTimeProvider dateTimeProvider, IPostRepository postRepository) : IPostService
 {
@@ -29,6 +29,7 @@ public class PostService(IDateTimeProvider dateTimeProvider, IPostRepository pos
         var post = new Post
         {
             Title = createPostDto.Title,
+            Description = createPostDto.Description,
             Content = createPostDto.Content,
             AuthorId = authorId,
             Author = author,
@@ -50,6 +51,7 @@ public class PostService(IDateTimeProvider dateTimeProvider, IPostRepository pos
             var post = new Post
             {
                 Title = createPostDto.Title,
+                Description = createPostDto.Description,
                 Content = createPostDto.Content,
                 AuthorId = authorId,
                 Author = author,
@@ -76,6 +78,7 @@ public class PostService(IDateTimeProvider dateTimeProvider, IPostRepository pos
         if (post == null) return false;
         post.Title = editPostDto.Title;
         post.Content = editPostDto.Content;
+        post.Description = editPostDto.Description;
         post.ModifiedDate = dateTimeProvider.Now;
         return await postRepository.ReplaceOneAsync(id, post);
     }

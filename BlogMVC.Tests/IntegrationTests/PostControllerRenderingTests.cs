@@ -7,9 +7,9 @@ using Microsoft.Extensions.DependencyInjection;
 namespace BlogMVC.Tests.IntegrationTests;
 
 /// <summary>
-/// Integration tests focused on the rendered HTML output of <see cref="PostController"/>
-/// (checking that the response contains the expected content, forms, and field values),
-/// against the real app and a real MongoDB instance.
+///     Integration tests focused on the rendered HTML output of <see cref="PostController" />
+///     (checking that the response contains the expected content, forms, and field values),
+///     against the real app and a real MongoDB instance.
 /// </summary>
 [Collection("PostController")]
 public class PostControllerRenderingTests(WebApplicationFactory<Program> factory)
@@ -181,6 +181,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("name=\"Title\"", content);
+        Assert.Contains("name=\"Description\"", content);
         Assert.Contains("name=\"Content\"", content);
         Assert.Contains("Submit", content);
     }
@@ -196,6 +197,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "" },
+            { "Description", "Test Description" },
             { "Content", "Test Content" }
         });
 
@@ -205,6 +207,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Test Description", content);
         Assert.Contains("Test Content", content);
         Assert.Contains("The Title field is required.", content);
     }
@@ -218,6 +221,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "Test Title" },
+            { "Description", "Test Description" },
             { "Content", "" }
         });
 
@@ -228,7 +232,32 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
+        Assert.Contains("Test Description", content);
         Assert.Contains("The Content field is required.", content);
+    }
+
+    /// <summary>Verifies that Create (POST) WithInvalidDescription returns a View.</summary>
+    [Fact]
+    public async Task Create_POST_WithInvalidDescription_ReturnsView()
+    {
+        // Arrange
+        var client = CreateAuthenticatedClient(OwnerId);
+        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "Title", "Test Title" },
+            { "Description", "" },
+            { "Content", "Test Content" }
+        });
+
+        // Act
+        var response = await client.PostAsync("/Post/Create", formData);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Test Title", content);
+        Assert.Contains("Test Content", content);
+        Assert.Contains("The Description field is required.", content);
     }
 
     /// <summary>Verifies that Create (POST) WithValidContent ReturnsDetailsView.</summary>
@@ -240,6 +269,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "Test Title" },
+            { "Description", "Test Description" },
             { "Content", "Test Content" }
         });
 
@@ -250,6 +280,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
+        Assert.Contains("Test Description", content);
         Assert.Contains("Test Content", content);
     }
 
@@ -263,6 +294,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         var post = new PostFactory()
             .WithId(DefaultId)
             .WithTitle("Test Title")
+            .WithDescription("Test Description")
             .WithContent("Test Content")
             .WithAuthorId(OwnerId)
             .Build();
@@ -279,10 +311,12 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
+        Assert.Contains("Test Description", content);
         Assert.Contains("Test Content", content);
         Assert.Contains($"/Post/Details/{post.Id}", content);
         Assert.Contains("Go back", content);
         Assert.Contains("name=\"Title\"", content);
+        Assert.Contains("name=\"Description\"", content);
         Assert.Contains("name=\"Content\"", content);
     }
 
@@ -296,6 +330,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "" },
+            { "Description", "Test Description" },
             { "Content", "Test Content" }
         });
 
@@ -305,6 +340,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Test Description", content);
         Assert.Contains("Test Content", content);
         Assert.Contains("The Title field is required.", content);
     }
@@ -319,6 +355,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "Test Title" },
+            { "Description", "Test Description" },
             { "Content", "" }
         });
 
@@ -329,7 +366,33 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
+        Assert.Contains("Test Description", content);
         Assert.Contains("The Content field is required.", content);
+    }
+
+    /// <summary>Verifies that Edit (POST) WithInvalidDescription returns a View.</summary>
+    [Fact]
+    public async Task Edit_POST_WithInvalidDescription_ReturnsView()
+    {
+        // Arrange
+        var id = DefaultId;
+        var client = CreateAuthenticatedClient(OwnerId);
+        var formData = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "Title", "Test Title" },
+            { "Description", "" },
+            { "Content", "Test Content" }
+        });
+
+        // Act
+        var response = await client.PostAsync($"/Post/Edit/{id}", formData);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var content = await response.Content.ReadAsStringAsync();
+        Assert.Contains("Test Title", content);
+        Assert.Contains("Test Content", content);
+        Assert.Contains("The Description field is required.", content);
     }
 
     /// <summary>Verifies that Edit (POST) returns a View.</summary>
@@ -341,6 +404,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         var post = new PostFactory()
             .WithId(DefaultId)
             .WithTitle("Test Title2")
+            .WithDescription("Test Description2")
             .WithContent("Test Content2")
             .WithAuthorId(OwnerId)
             .Build();
@@ -352,6 +416,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         var formData = new FormUrlEncodedContent(new Dictionary<string, string>
         {
             { "Title", "Test Title" },
+            { "Description", "Test Description" },
             { "Content", "Test Content" }
         });
 
@@ -362,6 +427,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
+        Assert.Contains("Test Description", content);
         Assert.Contains("Test Content", content);
         Assert.Contains($"/Post/Edit/{DefaultId}", content);
         Assert.Contains($"/Post/Delete/{DefaultId}", content);

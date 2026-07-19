@@ -10,10 +10,10 @@ using Moq;
 namespace BlogMVC.Tests.Controllers;
 
 /// <summary>
-/// Unit tests for <see cref="PostController"/> using a mocked <see cref="IPostService"/>.
-/// Verify the return type of each action (View/NotFound/Unauthorized/Forbid/Redirect)
-/// depending on Id validity, model state, and whether the logged-in user is the author.
-/// Tests are grouped by action (Details, Create, Edit, Delete).
+///     Unit tests for <see cref="PostController" /> using a mocked <see cref="IPostService" />.
+///     Verify the return type of each action (View/NotFound/Unauthorized/Forbid/Redirect)
+///     depending on Id validity, model state, and whether the logged-in user is the author.
+///     Tests are grouped by action (Details, Create, Edit, Delete).
 /// </summary>
 public class PostControllerTests
 {
@@ -32,11 +32,10 @@ public class PostControllerTests
         {
             HttpContext = new DefaultHttpContext
             {
-                User = new ClaimsPrincipal(new ClaimsIdentity(new[]
-                {
+                User = new ClaimsPrincipal(new ClaimsIdentity([
                     new Claim(ClaimTypes.NameIdentifier, _defaultId),
-                    new Claim(ClaimTypes.Name, _defaultAuthor),
-                }, "test"))
+                    new Claim(ClaimTypes.Name, _defaultAuthor)
+                ], "test"))
             }
         };
     }
@@ -58,10 +57,9 @@ public class PostControllerTests
         {
             HttpContext = new DefaultHttpContext
             {
-                User = new ClaimsPrincipal(new ClaimsIdentity(new[]
-                {
-                    new Claim(ClaimTypes.NameIdentifier, _defaultId),
-                }, "test"))
+                User = new ClaimsPrincipal(new ClaimsIdentity([
+                    new Claim(ClaimTypes.NameIdentifier, _defaultId)
+                ], "test"))
             }
         };
     }
@@ -129,15 +127,51 @@ public class PostControllerTests
 
     // ---------- Create POST ----------
 
-    /// <summary>Verifies that Create (POST) with an invalid model returns the View again.</summary>
+    /// <summary>Verifies that Create (POST) with an invalid title model returns the View again.</summary>
     [Fact]
-    public async Task Create_POST_WithModelInvalid_ReturnView()
+    public async Task Create_POST_WithModelInvalidTitle_ReturnView()
     {
         // Arrange
         var createPostDto = new CreatePostDtoFactory()
             .WithTitle("")
             .Build();
         _postController.ModelState.AddModelError("Title", "Required");
+
+        //Act
+        var response = await _postController.Create(createPostDto);
+
+        //Assert
+        Assert.IsType<ViewResult>(response);
+        Assert.Equal(createPostDto, ((ViewResult)response).Model);
+    }
+
+    /// <summary>Verifies that Create (POST) with an invalid content model returns the View again.</summary>
+    [Fact]
+    public async Task Create_POST_WithModelInvalidContent_ReturnView()
+    {
+        // Arrange
+        var createPostDto = new CreatePostDtoFactory()
+            .WithContent("")
+            .Build();
+        _postController.ModelState.AddModelError("Content", "Required");
+
+        //Act
+        var response = await _postController.Create(createPostDto);
+
+        //Assert
+        Assert.IsType<ViewResult>(response);
+        Assert.Equal(createPostDto, ((ViewResult)response).Model);
+    }
+
+    /// <summary>Verifies that Create (POST) with an invalid description model returns the View again.</summary>
+    [Fact]
+    public async Task Create_POST_WithModelInvalidDescription_ReturnView()
+    {
+        // Arrange
+        var createPostDto = new CreatePostDtoFactory()
+            .WithDescription("")
+            .Build();
+        _postController.ModelState.AddModelError("Description", "Required");
 
         //Act
         var response = await _postController.Create(createPostDto);
@@ -272,11 +306,13 @@ public class PostControllerTests
         var id = _defaultId;
         var post = new PostFactory()
             .WithTitle("Title1")
+            .WithDescription("Description1")
             .WithContent("Content1")
             .WithAuthorId(_defaultId)
             .Build();
         var editPostDto = new EditPostDtoFactory()
             .WithTitle("Title1")
+            .WithDescription("Description1")
             .WithContent("Content1")
             .Build();
         _postServiceMock.Setup(p => p.GetPostAsync(_defaultId)).ReturnsAsync(post);
@@ -323,9 +359,9 @@ public class PostControllerTests
         Assert.IsType<NotFoundResult>(response);
     }
 
-    /// <summary>Verifies that Edit (POST) with an invalid model returns the View again.</summary>
+    /// <summary>Verifies that Edit (POST) with an invalid model title returns the View again.</summary>
     [Fact]
-    public async Task Edit_POST_WithModelInvalid_ReturnView()
+    public async Task Edit_POST_WithModelInvalidTitle_ReturnView()
     {
         //Arrange
         var id = _defaultId;
@@ -333,6 +369,44 @@ public class PostControllerTests
             .WithTitle("")
             .Build();
         _postController.ModelState.AddModelError("Title", "Required");
+
+        //Act
+        var response = await _postController.Edit(id, editPostDto);
+
+        //Assert
+        Assert.IsType<ViewResult>(response);
+        Assert.Equal(editPostDto, ((ViewResult)response).Model);
+    }
+
+    /// <summary>Verifies that Edit (POST) with an invalid model description returns the View again.</summary>
+    [Fact]
+    public async Task Edit_POST_WithModelInvalidDescription_ReturnView()
+    {
+        //Arrange
+        var id = _defaultId;
+        var editPostDto = new EditPostDtoFactory()
+            .WithDescription("")
+            .Build();
+        _postController.ModelState.AddModelError("Description", "Required");
+
+        //Act
+        var response = await _postController.Edit(id, editPostDto);
+
+        //Assert
+        Assert.IsType<ViewResult>(response);
+        Assert.Equal(editPostDto, ((ViewResult)response).Model);
+    }
+
+    /// <summary>Verifies that Edit (POST) with an invalid model content returns the View again.</summary>
+    [Fact]
+    public async Task Edit_POST_WithModelInvalidContent_ReturnView()
+    {
+        //Arrange
+        var id = _defaultId;
+        var editPostDto = new EditPostDtoFactory()
+            .WithContent("")
+            .Build();
+        _postController.ModelState.AddModelError("Content", "Required");
 
         //Act
         var response = await _postController.Edit(id, editPostDto);

@@ -3,21 +3,29 @@ using BlogMVC.Models;
 namespace BlogMVC.Tests.Helpers;
 
 /// <summary>
-/// Test Data Builder for creating <see cref="CreatePostDto"/> instances in tests,
-/// with sensible defaults and fluent methods to override individual fields.
+///     Test Data Builder for creating <see cref="CreatePostDto" /> instances in tests,
+///     with sensible defaults and fluent methods to override individual fields.
 /// </summary>
 public class CreatePostDtoFactory
 {
-    private CreatePostDto _entity = new CreatePostDto
+    private readonly CreatePostDto _entity = new()
     {
         Title = "Title",
-        Content = "Content",
+        Description = "Description",
+        Content = "Content"
     };
 
     /// <summary>Sets the title.</summary>
     public CreatePostDtoFactory WithTitle(string title)
     {
         _entity.Title = title;
+        return this;
+    }
+
+    /// <summary>Sets the description.</summary>
+    public CreatePostDtoFactory WithDescription(string description)
+    {
+        _entity.Description = description;
         return this;
     }
 
@@ -28,7 +36,7 @@ public class CreatePostDtoFactory
         return this;
     }
 
-    /// <summary>Returns the built <see cref="CreatePostDto"/> instance.</summary>
+    /// <summary>Returns the built <see cref="CreatePostDto" /> instance.</summary>
     public CreatePostDto Build()
     {
         return _entity;

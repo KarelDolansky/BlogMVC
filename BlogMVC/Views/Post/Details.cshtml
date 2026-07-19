@@ -13,6 +13,7 @@
                 <a class="btn btn-danger" asp-controller="Post" asp-action="Delete" asp-route-id="@Model.Id">Delete</a>
             }
             <h1>@Model.Title</h1>
+            <p class="lead ">@Model.Description</p>
             <div class="border-bottom mb-3 pb-3">
                 <p class="text-muted ">@Model.Author</p>
                 <p class="text-muted ">@Model.PublishDate.ToString("dd/MM/yyyy")</p>

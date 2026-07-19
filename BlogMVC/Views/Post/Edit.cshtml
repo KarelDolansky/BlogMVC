@@ -7,15 +7,20 @@
                asp-route-id="@ViewContext.RouteData.Values["id"]">Go back</a>
             <form asp-route-id="@ViewContext.RouteData.Values["id"]" asp-controller="Post" asp-action="Edit">
                 <div class="mb-3">
-                    <label asp-for="Title" class="form-label"/>
+                    <label asp-for="Title" class="form-label"></label>
                     <input asp-for="Title" class="form-control">
-                    <span asp-validation-for="Title"/>
+                    <span asp-validation-for="Title"></span>
                 </div>
                 <div class="mb-3">
-                    <label asp-for="Content" class="form-label"/>
+                    <label asp-for="Description" class="form-label"></label>
+                    <input asp-for="Description" class="form-control">
+                    <span asp-validation-for="Description"></span>
+                </div>
+                <div class="mb-3">
+                    <label asp-for="Content" class="form-label"></label>
                     <textarea asp-for="Content" class="form-control">
     </textarea>
-                    <span asp-validation-for="Content"/>
+                    <span asp-validation-for="Content"></span>
                 </div>
                 <button type="submit" class="btn btn-primary">
                     Edit
