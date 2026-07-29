@@ -1,16 +1,28 @@
 @model Post
+@{
+    var index = ViewData["Index"] as int? ?? 0;
+    var isUpdated = Model.ModifiedDate > Model.PublishDate;
+}
 
-<div class="card mb-3">
-    <div class="card-body">
-        <h5 class="card-title">@Model.Title</h5>
-        <p class="card-text">@Model.Description</p>
-        <p class="card-text"><small class="text-muted">Published: @Model.PublishDate.ToString("dd/MM/yyyy")</small></p>
-
-        @if (Model.ModifiedDate > Model.PublishDate)
+<tr>
+    <td class="post-index__idx">@index.ToString("D2")</td>
+    <td class="post-index__title-cell">
+        <a class="post-index__title stretched-link" asp-controller="Post" asp-action="Details"
+           asp-route-id="@Model.Id">@Model.Title</a>
+        <span class="post-index__desc">@Model.Description</span>
+    </td>
+    <td class="post-index__author">@Model.Author</td>
+    <td class="post-index__date">@Model.PublishDate.ToString("dd/MM/yyyy")</td>
+    <td class="post-index__status">
+        @if (isUpdated)
         {
-            <p class="card-text"><small class="text-muted">Updated: @Model.ModifiedDate.ToString("dd/MM/yyyy")</small>
-            </p>
+            <span class="status-dot status-dot--updated"></span>
+            <span class="status-label">Updated @Model.ModifiedDate.ToString("dd/MM/yyyy")</span>
         }
-        <a class="btn btn-primary stretched-link" asp-controller="Post" asp-action="Details" asp-route-id="@Model.Id">Details</a>
-    </div>
-</div>
+        else
+        {
+            <span class="status-dot"></span>
+            <span class="status-label">Published</span>
+        }
+    </td>
+</tr>

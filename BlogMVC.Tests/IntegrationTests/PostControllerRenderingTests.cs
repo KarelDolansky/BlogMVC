@@ -39,7 +39,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
         Assert.Contains("Test Content", content);
-        Assert.Contains("Go back", content);
+        Assert.Contains("Back to posts", content);
     }
 
     /// <summary>Verifies that Details AsAnonymousUser HidesEditAndDeleteLinks.</summary>
@@ -183,7 +183,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Contains("name=\"Title\"", content);
         Assert.Contains("name=\"Description\"", content);
         Assert.Contains("name=\"Content\"", content);
-        Assert.Contains("Submit", content);
+        Assert.Contains("Publish", content);
     }
 
     // ---------- Create POST ----------
@@ -314,7 +314,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Contains("Test Description", content);
         Assert.Contains("Test Content", content);
         Assert.Contains($"/Post/Details/{post.Id}", content);
-        Assert.Contains("Go back", content);
+        Assert.Contains("Back", content);
         Assert.Contains("name=\"Title\"", content);
         Assert.Contains("name=\"Description\"", content);
         Assert.Contains("name=\"Content\"", content);
@@ -459,7 +459,7 @@ public class PostControllerRenderingTests(WebApplicationFactory<Program> factory
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("Test Title", content);
-        Assert.Contains("Go back", content);
+        Assert.Contains("Back to posts", content);
         Assert.Contains($"/Post/Delete/{DefaultId}", content);
         Assert.Contains($"/Post/Details/{post.Id}", content);
     }
