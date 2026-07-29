@@ -1,28 +1,32 @@
 @using System.Security.Claims
 @model Post
+@{
+    ViewData["Title"] = Model.Title;
+}
 
-
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-lg-6 ">
-            <a class="btn btn-outline-secondary" asp-controller="Home" asp-action="Index">Go back</a>
-            @if (Model.AuthorId == User.FindFirstValue(ClaimTypes.NameIdentifier))
-            {
-                <a class="btn btn-outline-secondary" asp-controller="Post" asp-action="Edit"
-                   asp-route-id="@Model.Id">Edit</a>
-                <a class="btn btn-danger" asp-controller="Post" asp-action="Delete" asp-route-id="@Model.Id">Delete</a>
-            }
-            <h1>@Model.Title</h1>
-            <p class="lead ">@Model.Description</p>
-            <div class="border-bottom mb-3 pb-3">
-                <p class="text-muted ">@Model.Author</p>
-                <p class="text-muted ">@Model.PublishDate.ToString("dd/MM/yyyy")</p>
-                @if (Model.ModifiedDate > Model.PublishDate)
-                {
-                    <p class="text-muted">@Model.ModifiedDate.ToString("dd/MM/yyyy")</p>
-                }
-            </div>
-            <p>@Model.Content</p> <!--TODO: Wrapping Text -->
-        </div>
-    </div>
+<div class="toolbar">
+    <a class="btn btn-outline-secondary" asp-controller="Home" asp-action="Index">&larr; Back to posts</a>
+    @if (Model.AuthorId == User.FindFirstValue(ClaimTypes.NameIdentifier))
+    {
+        <a class="btn btn-outline-secondary" asp-controller="Post" asp-action="Edit" asp-route-id="@Model.Id">Edit</a>
+        <a class="btn btn-danger" asp-controller="Post" asp-action="Delete" asp-route-id="@Model.Id">Delete</a>
+    }
 </div>
+
+<article>
+    <header class="post-header">
+        <div class="post-header__breadcrumb">Post / @Model.Id</div>
+        <h1>@Model.Title</h1>
+        <p class="lead">@Model.Description</p>
+        <div class="post-byline">
+            <span class="author">@Model.Author</span>
+            <span>Published @Model.PublishDate.ToString("dd/MM/yyyy")</span>
+            @if (Model.ModifiedDate > Model.PublishDate)
+            {
+                <span><span
+                        class="status-dot status-dot--updated"></span>Updated @Model.ModifiedDate.ToString("dd/MM/yyyy")</span>
+            }
+        </div>
+    </header>
+    <div class="post-content">@Model.Content</div>
+</article>

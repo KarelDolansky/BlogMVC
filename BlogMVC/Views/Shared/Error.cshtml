@@ -3,8 +3,10 @@
     ViewData["Title"] = "Error";
 }
 
-<h1 class="text-danger">Error.</h1>
-<h2 class="text-danger">An error occurred while processing your request.</h2>
+<div class="page-header">
+    <span class="panel__eyebrow" style="color: var(--rust);">Something went wrong</span>
+    <h1>An error occurred while processing your request.</h1>
+</div>
 
 @if (Model.ShowRequestId)
 {

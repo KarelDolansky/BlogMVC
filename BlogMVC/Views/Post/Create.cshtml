@@ -1,28 +1,31 @@
 @model CreatePostDto
+@{
+    ViewData["Title"] = "New post";
+}
 
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-lg-6 ">
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="panel">
+            <span class="panel__eyebrow">New post</span>
+            <h1>Write a post</h1>
             <form asp-controller="Post" asp-action="Create">
                 <div class="mb-3">
                     <label asp-for="Title" class="form-label"></label>
-                    <input asp-for="Title" class="form-control">
+                    <input asp-for="Title" class="form-control" placeholder="Give it a title">
                     <span asp-validation-for="Title"></span>
                 </div>
                 <div class="mb-3">
                     <label asp-for="Description" class="form-label"></label>
-                    <input asp-for="Description" class="form-control">
+                    <input asp-for="Description" class="form-control" placeholder="One line describing the post">
                     <span asp-validation-for="Description"></span>
                 </div>
-                <div class="mb-3">
+                <div class="mb-4">
                     <label asp-for="Content" class="form-label"></label>
-                    <textarea asp-for="Content" class="form-control">
-    </textarea>
+                    <textarea asp-for="Content" class="form-control" placeholder="Write the post..."></textarea>
                     <span asp-validation-for="Content"></span>
                 </div>
-                <button type="submit" class="btn btn-primary">
-                    Submit
-                </button>
+                <button type="submit" class="btn btn-primary">Publish</button>
+                <a class="btn btn-outline-secondary" asp-controller="Home" asp-action="Index">Cancel</a>
             </form>
         </div>
     </div>

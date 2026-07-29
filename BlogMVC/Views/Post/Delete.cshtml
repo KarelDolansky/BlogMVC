@@ -1,22 +1,29 @@
 @model Post
+@{
+    ViewData["Title"] = "Delete post";
+}
 
-
-<div class="container">
-    <div class="row justify-content-center">
-        <div class="col-lg-6 ">
-            <a class="btn btn-outline-secondary" asp-controller="Home" asp-action="Index">Go back</a>
-            <h1>@Model.Title</h1>
-            <p class="lead ">@Model.Description</p>
-            <div class="border-bottom mb-3 pb-3">
-                <p class="text-muted ">@Model.Author</p>
-                <p class="text-muted ">@Model.PublishDate.ToString("dd/MM/yyyy")</p>
-                @if (Model.ModifiedDate > Model.PublishDate)
-                {
-                    <p class="text-muted">@Model.ModifiedDate.ToString("dd/MM/yyyy")</p>
-                }
-            </div>
-            <form asp-action="Delete" asp-route-id="@Model.Id">
-                <button class="btn btn-danger">Delete</button>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <a class="btn btn-outline-secondary mb-3" asp-controller="Home" asp-action="Index">&larr; Back to posts</a>
+        <div class="panel panel--danger">
+            <span class="panel__eyebrow">Delete this post?</span>
+            <header class="post-header">
+                <h1>@Model.Title</h1>
+                <p class="lead">@Model.Description</p>
+                <div class="post-byline">
+                    <span class="author">@Model.Author</span>
+                    <span>Published @Model.PublishDate.ToString("dd/MM/yyyy")</span>
+                    @if (Model.ModifiedDate > Model.PublishDate)
+                    {
+                        <span><span
+                                class="status-dot status-dot--updated"></span>Updated @Model.ModifiedDate.ToString("dd/MM/yyyy")</span>
+                    }
+                </div>
+            </header>
+            <p>This can't be undone. The post will be permanently removed.</p>
+            <form asp-action="Delete" asp-route-id="@Model.Id" class="d-inline">
+                <button class="btn btn-danger">Delete permanently</button>
             </form>
             <a class="btn btn-outline-secondary" asp-controller="Post" asp-action="Details" asp-route-id="@Model.Id">Cancel</a>
         </div>
