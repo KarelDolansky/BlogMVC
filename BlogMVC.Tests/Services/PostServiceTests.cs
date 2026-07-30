@@ -507,4 +507,53 @@ public class PostServiceTests
         // Assert
         Assert.False(result);
     }
+
+    // ---------- SearchAsync ----------
+
+    /// <summary>Verifies that SearchAsync returns the matching posts from the repository.</summary>
+    [Fact]
+    public async Task SearchAsync_ReturnsMatchingPosts_FromRepository()
+    {
+        // Arrange
+        var posts = new List<Post>
+        {
+            new PostFactory().WithTitle("Title1").Build(),
+            new PostFactory().WithTitle("Title2").Build()
+        };
+        _postRepositoryMock.Setup(p => p.SearchAsync("term")).ReturnsAsync(posts);
+
+        // Act
+        var result = await _postService.SearchAsync("term");
+
+        // Assert
+        Assert.Equal(posts, result);
+    }
+
+    /// <summary>Verifies that SearchAsync passes the query through to the repository unchanged.</summary>
+    [Fact]
+    public async Task SearchAsync_PassesQuery_ToRepository()
+    {
+        // Arrange
+        _postRepositoryMock.Setup(p => p.SearchAsync(It.IsAny<string>())).ReturnsAsync(new List<Post>());
+
+        // Act
+        await _postService.SearchAsync("some query");
+
+        // Assert
+        _postRepositoryMock.Verify(p => p.SearchAsync("some query"), Times.Once);
+    }
+
+    /// <summary>Verifies that SearchAsync when there are no matches returns an empty list.</summary>
+    [Fact]
+    public async Task SearchAsync_WithNoMatches_ReturnsEmptyList()
+    {
+        // Arrange
+        _postRepositoryMock.Setup(p => p.SearchAsync("nothing-matches")).ReturnsAsync(new List<Post>());
+
+        // Act
+        var result = await _postService.SearchAsync("nothing-matches");
+
+        // Assert
+        Assert.Empty(result);
+    }
 }

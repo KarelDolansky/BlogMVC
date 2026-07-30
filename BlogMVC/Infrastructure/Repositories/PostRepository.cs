@@ -1,6 +1,8 @@
+using System.Text.RegularExpressions;
 using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Models;
 using Microsoft.Extensions.Options;
+using MongoDB.Bson;
 using MongoDB.Driver;
 
 namespace BlogMVC.Infrastructure.Repositories;
@@ -65,5 +67,16 @@ public class PostRepository : IPostRepository
     {
         // Ordered from the newest post so the latest content shows up first in the listing.
         return await _posts.Find(_ => true).SortByDescending(x => x.PublishDate).ToListAsync();
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Post>> SearchAsync(string query)
+    {
+        var escapedQuery = Regex.Escape(query);
+        var filter = Builders<Post>.Filter.Or(
+            Builders<Post>.Filter.Regex(p => p.Title, new BsonRegularExpression(escapedQuery, "i")),
+            Builders<Post>.Filter.Regex(p => p.Description, new BsonRegularExpression(escapedQuery, "i"))
+        );
+        return await _posts.Find(filter).SortByDescending(x => x.PublishDate).ToListAsync();
     }
 }

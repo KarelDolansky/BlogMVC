@@ -44,7 +44,14 @@
 /* Base                                                                  */
 /* -------------------------------------------------------------------- */
 
+html {
+    height: 100%;
+}
+
 body {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
     margin: 0;
     background-color: var(--paper);
     color: var(--ink);
@@ -185,12 +192,17 @@ a:focus-visible, button:focus-visible, input:focus-visible {
 /* Shell / footer                                                       */
 /* -------------------------------------------------------------------- */
 
+.content-wrap {
+    flex: 1 0 auto;
+    width: 100%;
+}
+
 main {
-    min-height: 55vh;
     padding-top: 2rem;
 }
 
 .site-footer {
+    flex-shrink: 0;
     border-top: 1px solid var(--line);
     margin-top: 4rem;
     padding: 1.25rem 0 2rem;
@@ -251,13 +263,29 @@ main {
     background: var(--surface);
     border: 1px solid var(--line);
     border-radius: var(--radius);
-    overflow-x: auto;
 }
 
 .post-index {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
     font-size: .95rem;
+}
+
+.post-index__col--idx {
+    width: 2.75rem;
+}
+
+.post-index__col--author {
+    width: 16%;
+}
+
+.post-index__col--date {
+    width: 14%;
+}
+
+.post-index__col--status {
+    width: 19%;
 }
 
 .post-index thead th {
@@ -271,6 +299,8 @@ main {
     padding: .7rem 1rem;
     border-bottom: 1px solid var(--line);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .post-index tbody tr {
@@ -297,12 +327,14 @@ main {
 }
 
 .post-index__title-cell {
-    min-width: 16rem;
     position: relative;
 }
 
 .post-index__title {
     display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     font-weight: 600;
     color: var(--ink);
     text-decoration: none;
@@ -313,7 +345,10 @@ main {
 }
 
 .post-index__desc {
-    display: block;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
     color: var(--muted);
     font-size: .87rem;
     margin-top: .15rem;
@@ -321,7 +356,7 @@ main {
 
 .post-index__author, .post-index__date {
     color: var(--muted);
-    white-space: nowrap;
+    overflow-wrap: break-word;
 }
 
 .post-index__status {
@@ -371,6 +406,10 @@ main {
     .post-index__idx {
         color: var(--muted);
         font-size: .8rem;
+    }
+
+    .post-index__title {
+        white-space: normal;
     }
 }
 
@@ -551,4 +590,34 @@ code {
     padding: .1rem .35rem;
     border-radius: 3px;
     color: var(--rust);
+}
+
+/* -------------------------------------------------------------------- */
+/* Search bar                                                           */
+/* -------------------------------------------------------------------- */
+
+.search-form {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.search-form__input {
+    padding: 6px 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 200px;
+}
+
+.search-form__btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 6px;
+    color: #666;
+}
+
+.search-form__btn:hover {
+    color: #000;
 }

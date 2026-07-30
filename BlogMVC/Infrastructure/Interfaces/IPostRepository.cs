@@ -25,4 +25,11 @@ public interface IPostRepository
 
     /// <summary>Returns all posts, ordered from the most recently published.</summary>
     Task<IReadOnlyList<Post>> FindAllAsync();
+
+    /// <summary>
+    ///     Searches posts by a case-insensitive match against their title or description.
+    /// </summary>
+    /// <param name="query">The text to search for.</param>
+    /// <returns>Matching posts, ordered from the most recently published.</returns>
+    Task<IReadOnlyList<Post>> SearchAsync(string query);
 }
