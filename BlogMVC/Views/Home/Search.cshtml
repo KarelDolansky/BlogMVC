@@ -1,18 +1,19 @@
 ﻿@model List<Post>
 @{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "Search Page";
+    var query = ViewData["Query"];
 }
 
 <div class="hero">
-    <h1>Posts</h1>
+    <h1>Results for: @query</h1>
     <span class="hero__count">@Model.Count @(Model.Count == 1 ? "entry" : "entries")</span>
 </div>
 
 @if (Model.Count == 0)
 {
     <div class="empty-state">
-        <h2>No posts yet</h2>
-        <p>Once someone publishes a post, it will show up in this list.</p>
+        <h2>No results for @query</h2>
+        <!--<p>Once someone publishes a post, it will show up in this list.</p>-->
     </div>
 }
 else
@@ -20,13 +21,6 @@ else
     <div class="post-index-wrap">
         <table class="post-index">
             <caption class="visually-hidden">List of published blog posts</caption>
-            <colgroup>
-                <col class="post-index__col--idx"/>
-                <col class="post-index__col--title"/>
-                <col class="post-index__col--author"/>
-                <col class="post-index__col--date"/>
-                <col class="post-index__col--status"/>
-            </colgroup>
             <thead>
             <tr>
                 <th scope="col">#</th>

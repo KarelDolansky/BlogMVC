@@ -82,4 +82,10 @@ public class PostService(IDateTimeProvider dateTimeProvider, IPostRepository pos
         post.ModifiedDate = dateTimeProvider.Now;
         return await postRepository.ReplaceOneAsync(id, post);
     }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Post>> SearchAsync(string query)
+    {
+        return await postRepository.SearchAsync(query);
+    }
 }
