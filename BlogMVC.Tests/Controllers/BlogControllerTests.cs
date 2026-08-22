@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using BlogMVC.Controllers;
+using BlogMVC.Dto;
 using BlogMVC.Models;
 using BlogMVC.Services;
 using BlogMVC.Tests.Helpers;

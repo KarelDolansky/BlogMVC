@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using BlogMVC.Dto;
 using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Models;
 using BlogMVC.Tests.Helpers;

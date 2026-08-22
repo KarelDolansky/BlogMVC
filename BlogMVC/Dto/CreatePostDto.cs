@@ -1,6 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 
-namespace BlogMVC.Models;
+namespace BlogMVC.Dto;
 
 /// <summary>
 ///     Data Transfer Object used to create a new post.
