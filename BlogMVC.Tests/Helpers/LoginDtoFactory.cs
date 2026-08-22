@@ -1,4 +1,4 @@
-using BlogMVC.Models;
+using BlogMVC.Dto;
 
 namespace BlogMVC.Tests.Helpers;
 

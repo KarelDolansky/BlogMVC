@@ -1,3 +1,4 @@
+using BlogMVC.Dto;
 using BlogMVC.Models;
 using BlogMVC.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -8,11 +9,10 @@ namespace BlogMVC.Controllers;
 
 /// <summary>
 /// REST Web API for blog posts (JSON), available at "api/blog".
-/// Complements the MVC controller <see cref="PostController"/>, which serves the web UI.
 /// Reading posts (<see cref="GetPosts"/>, <see cref="GetPost"/>) is public by design.
 /// Creating, editing, deleting, and bulk-creating posts require a valid JWT bearer token
 /// (see <see cref="AuthController.Login"/> to obtain one); editing/deleting additionally
-/// require the caller to be the post's author, mirroring the checks in <see cref="PostController"/>.
+/// require the caller to be the post's author.
 /// </summary>
 [Route("api/[controller]")]
 [ApiController]
@@ -75,8 +75,7 @@ public class BlogController(IPostService postService) : BaseApiController
     /// <summary>
     /// PUT api/blog/{id} – updates an existing post. Requires a valid JWT bearer token and that
     /// the caller is the post's author (403 Forbid otherwise). Returns 400 for an invalid Id,
-    /// 404 if the post doesn't exist. Mirrors the ownership check in
-    /// <see cref="PostController.Edit(string, EditPostDto)"/>.
+    /// 404 if the post doesn't exist.
     /// </summary>
     [HttpPut("{id}")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
@@ -98,8 +97,7 @@ public class BlogController(IPostService postService) : BaseApiController
     /// <summary>
     /// DELETE api/blog/{id} – deletes a post. Requires a valid JWT bearer token and that the
     /// caller is the post's author (403 Forbid otherwise). Returns 400 for an invalid Id,
-    /// 404 if the post doesn't exist. Mirrors the ownership check in
-    /// <see cref="PostController.DeletePost"/>.
+    /// 404 if the post doesn't exist.
     /// </summary>
     [HttpDelete("{id}")]
     [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]

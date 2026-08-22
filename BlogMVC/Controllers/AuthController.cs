@@ -1,4 +1,4 @@
-using BlogMVC.Models;
+using BlogMVC.Dto;
 using BlogMVC.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;

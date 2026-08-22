@@ -1,4 +1,5 @@
-﻿using BlogMVC.Infrastructure.Interfaces;
+﻿using BlogMVC.Dto;
+using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Models;
 using BlogMVC.Services;
 using BlogMVC.Tests.Helpers;

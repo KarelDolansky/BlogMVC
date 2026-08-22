@@ -25,8 +25,9 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
 // Register Identity: requires a confirmed account (email) to sign in.
-builder.Services.AddDefaultIdentity<IdentityUser>(options => options.SignIn.RequireConfirmedAccount = true)
-    .AddEntityFrameworkStores<ApplicationDbContext>();
+builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = true)
+    .AddEntityFrameworkStores<ApplicationDbContext>()
+    .AddDefaultTokenProviders();
 
 builder.Services.AddAuthentication()
     .AddJwtBearer(options =>
@@ -44,8 +45,11 @@ builder.Services.AddAuthentication()
         };
     });
 
-// MVC controllers + views; Razor Runtime Compilation allows editing .cshtml files without a rebuild.
-builder.Services.AddControllersWithViews().AddRazorRuntimeCompilation();
+// API controllers only (no views).
+builder.Services.AddControllers();
+
+// Returns RFC 7807 ProblemDetails JSON for unhandled exceptions and non-successful status codes.
+builder.Services.AddProblemDetails();
 
 // --- MongoDB (blog post storage) ---
 // Settings (connection string, database and collection names) are read from the "MongoDb" section in appsettings.json.
@@ -72,8 +76,9 @@ if (app.Environment.IsDevelopment())
 }
 else
 {
-    // In production, unhandled exceptions redirect to the generic error page and the stack trace is hidden.
-    app.UseExceptionHandler("/Home/Error");
+    // In production, unhandled exceptions are turned into a generic ProblemDetails JSON response
+    // (registered via AddProblemDetails above) instead of the stack trace.
+    app.UseExceptionHandler();
     // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
@@ -83,17 +88,7 @@ app.UseRouting();
 
 app.UseAuthorization();
 
-// Maps static files (wwwroot) with fingerprinting/caching support (.NET 9 MapStaticAssets).
-app.MapStaticAssets();
-
-// Default conventional route: /{Controller}/{Action}/{id?}, defaulting to HomeController.Index.
-app.MapControllerRoute(
-        "default",
-        "{controller=Home}/{action=Index}/{id?}")
-    .WithStaticAssets();
-
-// Razor Pages – used for the built-in Identity pages (registration, login, account management).
-app.MapRazorPages()
-    .WithStaticAssets();
+// Maps the attribute-routed API controllers (AuthController, BlogController).
+app.MapControllers();
 
 app.Run();
