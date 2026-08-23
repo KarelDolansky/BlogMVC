@@ -64,7 +64,8 @@ builder.Services.AddSingleton(new MongoClient(connectionStringMongoDb));
 builder.Services.AddSingleton<IPostService, PostService>();
 builder.Services.AddSingleton<IDateTimeProvider, SystemDateTimeProvider>();
 builder.Services.AddSingleton<IPostRepository, PostRepository>();
-builder.Services.AddSingleton<ITokenService, TokenService>();
+builder.Services.AddSingleton<ITokenProvider, TokenProvider>();
+builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 

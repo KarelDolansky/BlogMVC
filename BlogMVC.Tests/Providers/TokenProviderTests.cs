@@ -2,20 +2,20 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using BlogMVC.Infrastructure.Interfaces;
-using BlogMVC.Services;
+using BlogMVC.Infrastructure.Providers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using Moq;
 
-namespace BlogMVC.Tests.Services;
+namespace BlogMVC.Tests.Providers;
 
 /// <summary>
-///     Unit tests for <see cref="TokenService" /> using a mocked <see cref="IConfiguration" /> and
+///     Unit tests for <see cref="TokenProvider" /> using a mocked <see cref="IConfiguration" /> and
 ///     <see cref="IDateTimeProvider" />. Verify the generated JWT's claims, issuer/audience,
 ///     expiration and signature.
 /// </summary>
-public class TokenServiceTests
+public class TokenProviderTests
 {
     private const string DefaultAudience = "defaultAudience";
     private const string DefaultIssuer = "defaultIssuer";
@@ -28,9 +28,9 @@ public class TokenServiceTests
         UserName = "defaultUserName"
     };
 
-    private readonly TokenService _tokenService;
+    private readonly TokenProvider _tokenProvider;
 
-    public TokenServiceTests()
+    public TokenProviderTests()
     {
         var configurationMock = new Mock<IConfiguration>();
         configurationMock.Setup(c => c["Jwt:Key"]).Returns(DefaultKey);
@@ -40,7 +40,7 @@ public class TokenServiceTests
         var dateTimeProviderMock = new Mock<IDateTimeProvider>();
         dateTimeProviderMock.Setup(d => d.Now).Returns(DefaultDate);
 
-        _tokenService = new TokenService(configurationMock.Object, dateTimeProviderMock.Object);
+        _tokenProvider = new TokenProvider(configurationMock.Object, dateTimeProviderMock.Object);
     }
 
     // ---------- CreateToken ----------
@@ -50,7 +50,7 @@ public class TokenServiceTests
     public void CreateToken_ReturnsNonEmptyToken()
     {
         // Act
-        var token = _tokenService.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser);
 
         // Assert
         Assert.False(string.IsNullOrWhiteSpace(token));
@@ -61,7 +61,7 @@ public class TokenServiceTests
     public void CreateToken_IncludesNameIdentifierClaim_WithUserId()
     {
         // Act
-        var token = _tokenService.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser);
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         // Assert
@@ -74,7 +74,7 @@ public class TokenServiceTests
     public void CreateToken_IncludesNameClaim_WithUserName()
     {
         // Act
-        var token = _tokenService.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser);
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         // Assert
@@ -87,7 +87,7 @@ public class TokenServiceTests
     public void CreateToken_SetsIssuerAndAudience_FromConfiguration()
     {
         // Act
-        var token = _tokenService.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser);
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         // Assert
@@ -100,7 +100,7 @@ public class TokenServiceTests
     public void CreateToken_SetsExpiration_OneHourFromDateTimeProviderNow()
     {
         // Act
-        var token = _tokenService.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser);
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         // Assert
@@ -115,7 +115,7 @@ public class TokenServiceTests
     public void CreateToken_SignsTokenWithConfiguredKey_ValidatesWithSameKey()
     {
         // Arrange
-        var token = _tokenService.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser);
         var validationParameters = new TokenValidationParameters
         {
             ValidIssuer = DefaultIssuer,
@@ -133,7 +133,7 @@ public class TokenServiceTests
     public void CreateToken_SignsTokenWithConfiguredKey_FailsValidationWithDifferentKey()
     {
         // Arrange
-        var token = _tokenService.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser);
         var validationParameters = new TokenValidationParameters
         {
             ValidIssuer = DefaultIssuer,
