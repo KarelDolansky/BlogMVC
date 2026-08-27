@@ -5,9 +5,8 @@ using Microsoft.AspNetCore.Identity;
 namespace BlogMVC.Services;
 
 /// <summary>
-///     Default implementation of <see cref="IAuthService" />. Uses <see cref="UserManager{TUser}" /> and
-///     <see cref="SignInManager{TUser}" /> to validate credentials, and <see cref="ITokenProvider" /> to
-///     issue a JWT on success.
+///     Default <see cref="IAuthService" />: validates credentials via Identity, issues a JWT via
+///     <see cref="ITokenProvider" />.
 /// </summary>
 public class AuthService(
     UserManager<IdentityUser> userManager,
@@ -30,5 +29,20 @@ public class AuthService(
                 : LoginResult.Failure(LoginFailureReason.InvalidCredentials);
 
         return LoginResult.Success(tokenProvider.CreateToken(user));
+    }
+
+    /// <inheritdoc />
+    public async Task<RegisterResult> RegisterAsync(RegisterDto registerDto)
+    {
+        var user = new IdentityUser { UserName = registerDto.Email, Email = registerDto.Email };
+        var createResult = await userManager.CreateAsync(user, registerDto.Password);
+        if (!createResult.Succeeded)
+            return RegisterResult.Failure(createResult.Errors.Select(e => e.Description));
+
+        // Lock the account until an administrator approves it, in place of email confirmation.
+        await userManager.SetLockoutEnabledAsync(user, true);
+        await userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
+
+        return RegisterResult.Success();
     }
 }

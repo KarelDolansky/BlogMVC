@@ -3,6 +3,7 @@ using System.Net.Http.Json;
 using BlogMVC.Dto;
 using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Models;
+using BlogMVC.Responses;
 using BlogMVC.Tests.Helpers;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.DependencyInjection;
@@ -42,7 +43,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var posts = await response.Content.ReadFromJsonAsync<List<Post>>();
+        var posts = await response.Content.ReadFromJsonAsync<List<PostResponse>>();
         Assert.Empty(posts!);
     }
 
@@ -58,7 +59,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var posts = await response.Content.ReadFromJsonAsync<List<Post>>();
+        var posts = await response.Content.ReadFromJsonAsync<List<PostResponse>>();
         Assert.Single(posts!);
     }
 
@@ -98,7 +99,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var returned = await response.Content.ReadFromJsonAsync<Post>();
+        var returned = await response.Content.ReadFromJsonAsync<PostResponse>();
         Assert.Equal(post.Title, returned!.Title);
     }
 
@@ -131,7 +132,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var created = await response.Content.ReadFromJsonAsync<Post>();
+        var created = await response.Content.ReadFromJsonAsync<PostResponse>();
         Assert.Equal("New Post", created!.Title);
         Assert.Equal(userId, created.AuthorId);
         Assert.NotNull(response.Headers.Location);
@@ -170,7 +171,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
 
         // Assert
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        var created = await response.Content.ReadFromJsonAsync<List<Post>>();
+        var created = await response.Content.ReadFromJsonAsync<List<PostResponse>>();
         Assert.Equal(2, created!.Count);
         Assert.All(created, p => Assert.Equal(userId, p.AuthorId));
     }
@@ -246,7 +247,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         var getResponse = await Client.GetAsync($"/api/blog/{post.Id}");
-        var updated = await getResponse.Content.ReadFromJsonAsync<Post>();
+        var updated = await getResponse.Content.ReadFromJsonAsync<PostResponse>();
         Assert.Equal("Updated Title", updated!.Title);
     }
 

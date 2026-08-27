@@ -192,4 +192,111 @@ public class AuthServiceTests
         // Assert
         _tokenProviderMock.Verify(t => t.CreateToken(_defaultUser), Times.Once);
     }
+
+    // ---------- RegisterAsync ----------
+
+    /// <summary>Verifies that RegisterAsync with valid data creates the Identity user with email as username.</summary>
+    [Fact]
+    public async Task RegisterAsync_WithValidData_CreatesUserWithEmailAsUserName()
+    {
+        // Arrange
+        var registerDto = new RegisterDtoFactory().WithEmail(_defaultEmail).WithPassword(_defaultPassword).Build();
+        _userManagerMock
+            .Setup(u => u.CreateAsync(It.IsAny<IdentityUser>(), _defaultPassword))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        await _authService.RegisterAsync(registerDto);
+
+        // Assert
+        _userManagerMock.Verify(
+            u => u.CreateAsync(
+                It.Is<IdentityUser>(user => user.Email == _defaultEmail && user.UserName == _defaultEmail),
+                _defaultPassword),
+            Times.Once);
+    }
+
+    /// <summary>Verifies that RegisterAsync with valid data succeeds.</summary>
+    [Fact]
+    public async Task RegisterAsync_WithValidData_Succeeds()
+    {
+        // Arrange
+        var registerDto = new RegisterDtoFactory().Build();
+        _userManagerMock
+            .Setup(u => u.CreateAsync(It.IsAny<IdentityUser>(), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        var result = await _authService.RegisterAsync(registerDto);
+
+        // Assert
+        Assert.True(result.Succeeded);
+        Assert.Null(result.Errors);
+    }
+
+    /// <summary>Verifies that RegisterAsync locks the newly created account out indefinitely.</summary>
+    [Fact]
+    public async Task RegisterAsync_WithValidData_LocksTheAccount()
+    {
+        // Arrange
+        var registerDto = new RegisterDtoFactory().Build();
+        IdentityUser? createdUser = null;
+        _userManagerMock
+            .Setup(u => u.CreateAsync(It.IsAny<IdentityUser>(), It.IsAny<string>()))
+            .Callback<IdentityUser, string>((user, _) => createdUser = user)
+            .ReturnsAsync(IdentityResult.Success);
+        _userManagerMock
+            .Setup(u => u.SetLockoutEnabledAsync(It.IsAny<IdentityUser>(), true))
+            .ReturnsAsync(IdentityResult.Success);
+        _userManagerMock
+            .Setup(u => u.SetLockoutEndDateAsync(It.IsAny<IdentityUser>(), DateTimeOffset.MaxValue))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        await _authService.RegisterAsync(registerDto);
+
+        // Assert
+        _userManagerMock.Verify(u => u.SetLockoutEnabledAsync(createdUser!, true), Times.Once);
+        _userManagerMock.Verify(u => u.SetLockoutEndDateAsync(createdUser!, DateTimeOffset.MaxValue), Times.Once);
+    }
+
+    /// <summary>Verifies that RegisterAsync when account creation fails (e.g. duplicate email) returns the Identity errors.</summary>
+    [Fact]
+    public async Task RegisterAsync_WhenCreateFails_ReturnsFailureWithErrors()
+    {
+        // Arrange
+        var registerDto = new RegisterDtoFactory().Build();
+        var error = new IdentityError
+            { Code = "DuplicateEmail", Description = "Email 'test@example.com' is already taken." };
+        _userManagerMock
+            .Setup(u => u.CreateAsync(It.IsAny<IdentityUser>(), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Failed(error));
+
+        // Act
+        var result = await _authService.RegisterAsync(registerDto);
+
+        // Assert
+        Assert.False(result.Succeeded);
+        Assert.Contains(error.Description, result.Errors!);
+    }
+
+    /// <summary>Verifies that RegisterAsync when account creation fails does not lock out a (non-existent) account.</summary>
+    [Fact]
+    public async Task RegisterAsync_WhenCreateFails_DoesNotAttemptToLockAccount()
+    {
+        // Arrange
+        var registerDto = new RegisterDtoFactory().Build();
+        var error = new IdentityError { Code = "DuplicateEmail", Description = "Email already taken." };
+        _userManagerMock
+            .Setup(u => u.CreateAsync(It.IsAny<IdentityUser>(), It.IsAny<string>()))
+            .ReturnsAsync(IdentityResult.Failed(error));
+
+        // Act
+        await _authService.RegisterAsync(registerDto);
+
+        // Assert
+        _userManagerMock.Verify(u => u.SetLockoutEnabledAsync(It.IsAny<IdentityUser>(), It.IsAny<bool>()), Times.Never);
+        _userManagerMock.Verify(
+            u => u.SetLockoutEndDateAsync(It.IsAny<IdentityUser>(), It.IsAny<DateTimeOffset?>()), Times.Never);
+    }
 }
