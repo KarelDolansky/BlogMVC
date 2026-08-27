@@ -4,6 +4,7 @@ using System.Text.Json;
 using BlogMVC.Data;
 using BlogMVC.Dto;
 using BlogMVC.Models;
+using BlogMVC.Responses;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -127,11 +128,5 @@ public abstract class BlogControllerTestBase : IClassFixture<WebApplicationFacto
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", body!.Token);
 
         return (client, userId);
-    }
-
-    /// <summary>Shape of the JSON body returned by "api/auth/login" on success.</summary>
-    private class TokenResponse
-    {
-        public string Token { get; set; } = null!;
     }
 }

@@ -17,4 +17,12 @@ public interface IAuthService
     ///     currently locked out (failed attempts count towards Identity's account lockout).
     /// </summary>
     Task<LoginResult> LoginAsync(LoginDto loginDto);
+
+    /// <summary>
+    ///     Creates a new Identity account for the given email/password. Email confirmation is not required
+    ///     to sign in (see <see cref="Program" />), so the new account is instead created locked out
+    ///     indefinitely; an administrator must clear the lockout directly in the database (set
+    ///     <c>LockoutEnd</c> to null on the <c>AspNetUsers</c> row) before the account can log in.
+    /// </summary>
+    Task<RegisterResult> RegisterAsync(RegisterDto registerDto);
 }

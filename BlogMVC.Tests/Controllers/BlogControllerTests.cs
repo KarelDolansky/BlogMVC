@@ -2,6 +2,7 @@ using System.Security.Claims;
 using BlogMVC.Controllers;
 using BlogMVC.Dto;
 using BlogMVC.Models;
+using BlogMVC.Responses;
 using BlogMVC.Services;
 using BlogMVC.Tests.Helpers;
 using Microsoft.AspNetCore.Http;
@@ -53,6 +54,22 @@ public class BlogControllerTests
         };
     }
 
+    /// <summary>
+    ///     Asserts that a <see cref="PostResponse" /> carries the same data as the <see cref="Post" /> it was mapped
+    ///     from.
+    /// </summary>
+    private static void AssertMatches(Post expected, PostResponse actual)
+    {
+        Assert.Equal(expected.Id, actual.Id);
+        Assert.Equal(expected.Title, actual.Title);
+        Assert.Equal(expected.Description, actual.Description);
+        Assert.Equal(expected.Content, actual.Content);
+        Assert.Equal(expected.AuthorId, actual.AuthorId);
+        Assert.Equal(expected.Author, actual.Author);
+        Assert.Equal(expected.PublishDate, actual.PublishDate);
+        Assert.Equal(expected.ModifiedDate, actual.ModifiedDate);
+    }
+
     private void SetUserWithoutName()
     {
         _blogController.ControllerContext = new ControllerContext
@@ -81,7 +98,9 @@ public class BlogControllerTests
 
         // Assert
         var result = Assert.IsType<OkObjectResult>(response.Result);
-        Assert.Equal(posts, result.Value);
+        var returned = Assert.IsType<List<PostResponse>>(result.Value);
+        Assert.Equal(posts.Count, returned.Count);
+        AssertMatches(posts[0], returned[0]);
     }
 
     // ---------- GetPost ----------
@@ -129,7 +148,8 @@ public class BlogControllerTests
 
         // Assert
         var result = Assert.IsType<OkObjectResult>(response.Result);
-        Assert.Equal(post, result.Value);
+        var returned = Assert.IsType<PostResponse>(result.Value);
+        AssertMatches(post, returned);
     }
 
     // ---------- CreatePost ----------
@@ -185,7 +205,8 @@ public class BlogControllerTests
         var result = Assert.IsType<CreatedAtRouteResult>(response.Result);
         Assert.Equal("GetPost", result.RouteName);
         Assert.Equal(_defaultId, result.RouteValues!["id"]);
-        Assert.Equal(post, result.Value);
+        var returned = Assert.IsType<PostResponse>(result.Value);
+        AssertMatches(post, returned);
     }
 
     // ---------- BulkCreatePosts ----------
@@ -244,7 +265,9 @@ public class BlogControllerTests
         // Assert
         var result = Assert.IsType<ObjectResult>(response.Result);
         Assert.Equal(StatusCodes.Status201Created, result.StatusCode);
-        Assert.Equal(posts, result.Value);
+        var returned = Assert.IsType<List<PostResponse>>(result.Value);
+        Assert.Equal(posts.Count, returned.Count);
+        AssertMatches(posts[0], returned[0]);
     }
 
     // ---------- EditPost ----------
