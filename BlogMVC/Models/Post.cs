@@ -37,4 +37,7 @@ public class Post
 
     /// <summary>Date and time the post was last modified.</summary>
     public DateTime ModifiedDate { get; set; }
+
+    /// <summary>Optimistic-concurrency token, incremented on every edit. Exposed as an ETag, not a JSON field.</summary>
+    public long Version { get; set; }
 }

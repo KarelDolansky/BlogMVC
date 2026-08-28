@@ -3,6 +3,7 @@ using BlogMVC.Controllers;
 using BlogMVC.Dto;
 using BlogMVC.Models;
 using BlogMVC.Responses;
+using BlogMVC.Results;
 using BlogMVC.Services;
 using BlogMVC.Tests.Helpers;
 using Microsoft.AspNetCore.Http;
@@ -41,6 +42,11 @@ public class BlogControllerTests
                 }
             }
         };
+    }
+
+    private void SetIfMatchHeader(long version)
+    {
+        _blogController.HttpContext.Request.Headers.IfMatch = $"\"{version}\"";
     }
 
     private void SetEmptyUser()
@@ -336,16 +342,34 @@ public class BlogControllerTests
         Assert.IsType<ForbidResult>(response);
     }
 
-    /// <summary>Verifies that EditPost when the service fails to edit the post returns NotFound.</summary>
+    /// <summary>Verifies that EditPost without an If-Match header returns BadRequest.</summary>
     [Fact]
-    public async Task EditPost_EditReturnsFalse_ReturnsNotFound()
+    public async Task EditPost_WithoutIfMatchHeader_ReturnsBadRequest()
     {
         // Arrange
         var id = _defaultId;
         var editPostDto = new EditPostDtoFactory().Build();
         var post = new PostFactory().WithAuthorId(_defaultId).Build();
         _postServiceMock.Setup(p => p.GetPostAsync(_defaultId)).ReturnsAsync(post);
-        _postServiceMock.Setup(p => p.EditPostAsync(id, editPostDto)).ReturnsAsync(false);
+
+        // Act
+        var response = await _blogController.EditPost(id, editPostDto);
+
+        // Assert
+        Assert.IsType<BadRequestObjectResult>(response);
+    }
+
+    /// <summary>Verifies that EditPost when the service reports the post missing returns NotFound.</summary>
+    [Fact]
+    public async Task EditPost_EditReturnsNotFound_ReturnsNotFound()
+    {
+        // Arrange
+        var id = _defaultId;
+        var editPostDto = new EditPostDtoFactory().Build();
+        var post = new PostFactory().WithAuthorId(_defaultId).Build();
+        _postServiceMock.Setup(p => p.GetPostAsync(_defaultId)).ReturnsAsync(post);
+        _postServiceMock.Setup(p => p.EditPostAsync(id, editPostDto, 0)).ReturnsAsync(PostUpdateResult.NotFound);
+        SetIfMatchHeader(0);
 
         // Act
         var response = await _blogController.EditPost(id, editPostDto);
@@ -353,6 +377,26 @@ public class BlogControllerTests
         // Assert
         var result = Assert.IsType<NotFoundObjectResult>(response);
         Assert.Equal("Post not found.", result.Value);
+    }
+
+    /// <summary>Verifies that EditPost when the service reports a stale version returns 412 Precondition Failed.</summary>
+    [Fact]
+    public async Task EditPost_EditReturnsConflict_ReturnsPreconditionFailed()
+    {
+        // Arrange
+        var id = _defaultId;
+        var editPostDto = new EditPostDtoFactory().Build();
+        var post = new PostFactory().WithAuthorId(_defaultId).Build();
+        _postServiceMock.Setup(p => p.GetPostAsync(_defaultId)).ReturnsAsync(post);
+        _postServiceMock.Setup(p => p.EditPostAsync(id, editPostDto, 0)).ReturnsAsync(PostUpdateResult.Conflict);
+        SetIfMatchHeader(0);
+
+        // Act
+        var response = await _blogController.EditPost(id, editPostDto);
+
+        // Assert
+        var result = Assert.IsType<ObjectResult>(response);
+        Assert.Equal(StatusCodes.Status412PreconditionFailed, result.StatusCode);
     }
 
     /// <summary>Verifies that EditPost returns NoContent on success.</summary>
@@ -364,7 +408,8 @@ public class BlogControllerTests
         var editPostDto = new EditPostDtoFactory().Build();
         var post = new PostFactory().WithAuthorId(_defaultId).Build();
         _postServiceMock.Setup(p => p.GetPostAsync(_defaultId)).ReturnsAsync(post);
-        _postServiceMock.Setup(p => p.EditPostAsync(id, editPostDto)).ReturnsAsync(true);
+        _postServiceMock.Setup(p => p.EditPostAsync(id, editPostDto, 0)).ReturnsAsync(PostUpdateResult.Success);
+        SetIfMatchHeader(0);
 
         // Act
         var response = await _blogController.EditPost(id, editPostDto);

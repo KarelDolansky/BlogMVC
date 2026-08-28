@@ -74,6 +74,13 @@ public class PostFactory
         return this;
     }
 
+    /// <summary>Sets the post's optimistic-concurrency version.</summary>
+    public PostFactory WithVersion(long version)
+    {
+        _entity.Version = version;
+        return this;
+    }
+
     /// <summary>Returns the built <see cref="Post" /> instance.</summary>
     public Post Build()
     {

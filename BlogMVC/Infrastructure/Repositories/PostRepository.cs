@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Models;
+using BlogMVC.Results;
 using Microsoft.Extensions.Options;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -42,11 +43,13 @@ public class PostRepository : IPostRepository
     }
 
     /// <inheritdoc />
-    public async Task<bool> ReplaceOneAsync(string id, Post post)
+    public async Task<PostUpdateResult> ReplaceOneAsync(string id, long expectedVersion, Post post)
     {
-        // Replaces the whole document by Id; ModifiedCount > 0 means the document actually changed.
-        var result = await _posts.ReplaceOneAsync(p => p.Id == id, post);
-        return result.ModifiedCount > 0;
+        var result = await _posts.ReplaceOneAsync(p => p.Id == id && p.Version == expectedVersion, post);
+        if (result.ModifiedCount > 0) return PostUpdateResult.Success;
+
+        var exists = await _posts.Find(p => p.Id == id).AnyAsync();
+        return exists ? PostUpdateResult.Conflict : PostUpdateResult.NotFound;
     }
 
     /// <inheritdoc />

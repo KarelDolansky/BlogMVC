@@ -1,4 +1,5 @@
 using BlogMVC.Models;
+using BlogMVC.Results;
 
 namespace BlogMVC.Infrastructure.Interfaces;
 
@@ -14,8 +15,8 @@ public interface IPostRepository
     /// <summary>Inserts multiple posts at once and returns them.</summary>
     Task<IReadOnlyList<Post>> InsertManyAsync(IReadOnlyList<Post> posts);
 
-    /// <summary>Replaces an existing document by Id with new content. Returns true if a document was actually modified.</summary>
-    Task<bool> ReplaceOneAsync(string id, Post post);
+    /// <summary>Replaces a document by Id, only if its version still matches <paramref name="expectedVersion" />.</summary>
+    Task<PostUpdateResult> ReplaceOneAsync(string id, long expectedVersion, Post post);
 
     /// <summary>Deletes a document by Id. Returns true if a document was actually deleted.</summary>
     Task<bool> DeleteOneAsync(string id);

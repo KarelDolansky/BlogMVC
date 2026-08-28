@@ -1,4 +1,6 @@
-namespace BlogMVC.Services;
+using BlogMVC.Services;
+
+namespace BlogMVC.Results;
 
 /// <summary>Outcome of <see cref="IAuthService.RegisterAsync" />: success, or the Identity errors that caused failure.</summary>
 public class RegisterResult

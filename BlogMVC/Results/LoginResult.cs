@@ -1,4 +1,6 @@
-namespace BlogMVC.Services;
+using BlogMVC.Services;
+
+namespace BlogMVC.Results;
 
 /// <summary>Why a call to <see cref="IAuthService.LoginAsync" /> did not succeed.</summary>
 public enum LoginFailureReason
