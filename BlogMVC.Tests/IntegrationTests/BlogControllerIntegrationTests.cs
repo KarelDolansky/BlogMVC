@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using BlogMVC.Dto;
 using BlogMVC.Infrastructure.Interfaces;
@@ -30,6 +31,14 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
             .WithModifiedDate(DefaultDate)
             .Build();
         return await repository.InsertOneAsync(post);
+    }
+
+    private static async Task<HttpResponseMessage> PutWithIfMatchAsync(
+        HttpClient client, string url, EditPostDto editPostDto, EntityTagHeaderValue eTag)
+    {
+        var request = new HttpRequestMessage(HttpMethod.Put, url) { Content = JsonContent.Create(editPostDto) };
+        request.Headers.IfMatch.Add(eTag);
+        return await client.SendAsync(request);
     }
 
     // ---------- GetPosts ----------
@@ -101,6 +110,20 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var returned = await response.Content.ReadFromJsonAsync<PostResponse>();
         Assert.Equal(post.Title, returned!.Title);
+    }
+
+    /// <summary>Verifies that GetPost sets an ETag header, used by EditPost's If-Match check.</summary>
+    [Fact]
+    public async Task GetPost_ExistingPost_SetsETag()
+    {
+        // Arrange
+        var post = await SeedPostAsync("some-author-id");
+
+        // Act
+        var response = await Client.GetAsync($"/api/blog/{post.Id}");
+
+        // Assert
+        Assert.NotNull(response.Headers.ETag);
     }
 
     // ---------- CreatePost ----------
@@ -240,15 +263,51 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
         var (client, userId) = await CreateAuthenticatedClientAsync("author");
         var post = await SeedPostAsync(userId);
         var editPostDto = new EditPostDtoFactory().WithTitle("Updated Title").Build();
+        var eTag = (await Client.GetAsync($"/api/blog/{post.Id}")).Headers.ETag;
 
         // Act
-        var response = await client.PutAsJsonAsync($"/api/blog/{post.Id}", editPostDto);
+        var response = await PutWithIfMatchAsync(client, $"/api/blog/{post.Id}", editPostDto, eTag!);
 
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         var getResponse = await Client.GetAsync($"/api/blog/{post.Id}");
         var updated = await getResponse.Content.ReadFromJsonAsync<PostResponse>();
         Assert.Equal("Updated Title", updated!.Title);
+    }
+
+    /// <summary>Verifies that EditPost without an If-Match header returns 400 Bad Request.</summary>
+    [Fact]
+    public async Task EditPost_WithoutIfMatchHeader_ReturnsBadRequest()
+    {
+        // Arrange
+        var (client, userId) = await CreateAuthenticatedClientAsync("author");
+        var post = await SeedPostAsync(userId);
+
+        // Act
+        var response = await client.PutAsJsonAsync($"/api/blog/{post.Id}", new EditPostDtoFactory().Build());
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>Verifies that EditPost with a stale If-Match (post already edited since) returns 412.</summary>
+    [Fact]
+    public async Task EditPost_WithStaleIfMatch_ReturnsPreconditionFailed()
+    {
+        // Arrange
+        var (client, userId) = await CreateAuthenticatedClientAsync("author");
+        var post = await SeedPostAsync(userId);
+        var staleETag = (await Client.GetAsync($"/api/blog/{post.Id}")).Headers.ETag;
+
+        await PutWithIfMatchAsync(client, $"/api/blog/{post.Id}",
+            new EditPostDtoFactory().WithTitle("First Update").Build(), staleETag!);
+
+        // Act: second edit still carries the pre-first-edit ETag.
+        var response = await PutWithIfMatchAsync(client, $"/api/blog/{post.Id}",
+            new EditPostDtoFactory().WithTitle("Second Update").Build(), staleETag!);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.PreconditionFailed, response.StatusCode);
     }
 
     // ---------- DeletePost ----------

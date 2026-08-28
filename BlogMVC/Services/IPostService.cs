@@ -1,5 +1,6 @@
 using BlogMVC.Dto;
 using BlogMVC.Models;
+using BlogMVC.Results;
 
 namespace BlogMVC.Services;
 
@@ -28,8 +29,8 @@ public interface IPostService
     /// <summary>Deletes a post by Id. Returns true if it was deleted.</summary>
     Task<bool> DeletePostAsync(string id);
 
-    /// <summary>Updates the title and content of an existing post and refreshes the modified date. Returns true on success.</summary>
-    Task<bool> EditPostAsync(string id, EditPostDto editPostDto);
+    /// <summary>Updates a post's title/content if <paramref name="expectedVersion" /> still matches its current version.</summary>
+    Task<PostUpdateResult> EditPostAsync(string id, EditPostDto editPostDto, long expectedVersion);
 
     /// <summary>Bulk-creates multiple posts at once with the same author.</summary>
     Task<IReadOnlyList<Post>> AddBulkPostAsync(List<CreatePostDto> createPostDtoes, string authorId, string author);

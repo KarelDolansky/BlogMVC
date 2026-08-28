@@ -1,5 +1,6 @@
 using BlogMVC.Dto;
 using BlogMVC.Responses;
+using BlogMVC.Results;
 using BlogMVC.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -27,6 +28,7 @@ public class BlogController(IPostService postService) : BaseApiController
         if (!IsValidObjectId(id)) return BadRequest("Invalid post ID.");
         var post = await postService.GetPostAsync(id);
         if (post == null) return NotFound();
+        SetETag(post.Version);
         return Ok(PostResponse.FromPost(post));
     }
 
@@ -41,6 +43,7 @@ public class BlogController(IPostService postService) : BaseApiController
         if (string.IsNullOrEmpty(userName)) return Unauthorized();
 
         var created = await postService.AddPostAsync(createPostDto, userId, userName);
+        SetETag(created.Version);
         return CreatedAtRoute("GetPost", new { id = created.Id }, PostResponse.FromPost(created));
     }
 
@@ -75,8 +78,18 @@ public class BlogController(IPostService postService) : BaseApiController
         if (post == null) return NotFound();
         if (post.AuthorId != userId) return Forbid();
 
-        if (!await postService.EditPostAsync(id, editPostDto)) return NotFound("Post not found.");
-        return NoContent();
+        if (!TryGetIfMatchVersion(out var expectedVersion))
+            return BadRequest("If-Match header with the post's current ETag is required.");
+
+        var result = await postService.EditPostAsync(id, editPostDto, expectedVersion);
+        if (result == PostUpdateResult.Success) SetETag(expectedVersion + 1);
+        return result switch
+        {
+            PostUpdateResult.Success => NoContent(),
+            PostUpdateResult.Conflict => StatusCode(StatusCodes.Status412PreconditionFailed,
+                "Post was modified since you last fetched it. Reload and try again."),
+            _ => NotFound("Post not found.")
+        };
     }
 
     /// <summary>
