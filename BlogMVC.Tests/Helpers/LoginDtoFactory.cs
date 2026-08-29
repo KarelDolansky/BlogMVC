@@ -3,8 +3,8 @@ using BlogMVC.Dto;
 namespace BlogMVC.Tests.Helpers;
 
 /// <summary>
-/// Test Data Builder for creating <see cref="LoginDto"/> instances in tests,
-/// with sensible defaults and fluent methods to override individual fields.
+///     Test Data Builder for creating <see cref="LoginDto"/> instances in tests,
+///     with sensible defaults and fluent methods to override individual fields.
 /// </summary>
 public class LoginDtoFactory
 {

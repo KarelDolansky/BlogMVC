@@ -9,8 +9,8 @@ using MongoDB.Driver;
 namespace BlogMVC.Infrastructure.Repositories;
 
 /// <summary>
-/// Implementation of <see cref="IPostRepository"/> on top of the MongoDB driver.
-/// Encapsulates direct access to the posts collection (IMongoCollection&lt;Post&gt;).
+///     Implementation of <see cref="IPostRepository"/> on top of the MongoDB driver.
+///     Encapsulates direct access to the posts collection (IMongoCollection&lt;Post&gt;).
 /// </summary>
 public class PostRepository : IPostRepository
 {
@@ -18,7 +18,7 @@ public class PostRepository : IPostRepository
     private readonly IMongoCollection<Post> _posts;
 
     /// <summary>
-    /// Creates the repository and connects to the collection defined in <see cref="Models.MongoDbSettings"/>.
+    ///     Creates the repository and connects to the collection defined in <see cref="Models.MongoDbSettings"/>.
     /// </summary>
     /// <param name="settings">Database and collection configuration loaded from appsettings.json.</param>
     /// <param name="client">Shared MongoDB client registered in the DI container.</param>

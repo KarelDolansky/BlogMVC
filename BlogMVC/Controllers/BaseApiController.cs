@@ -5,8 +5,8 @@ using Microsoft.Net.Http.Headers;
 namespace BlogMVC.Controllers;
 
 /// <summary>
-/// Base class for Web API controllers (e.g. <see cref="BlogController"/>).
-/// Provides shared helper functionality so it doesn't have to be repeated in every API controller.
+///     Base class for Web API controllers (e.g. <see cref="BlogController"/>).
+///     Provides shared helper functionality so it doesn't have to be repeated in every API controller.
 /// </summary>
 public class BaseApiController : ControllerBase
 {

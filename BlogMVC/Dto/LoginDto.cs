@@ -3,8 +3,8 @@ using System.ComponentModel.DataAnnotations;
 namespace BlogMVC.Dto;
 
 /// <summary>
-/// Data Transfer Object used to authenticate a user via api/auth/login.
-/// Exchanged for a JWT access token by <see cref="Controllers.AuthController.Login"/>.
+///     Data Transfer Object used to authenticate a user via api/auth/login.
+///     Exchanged for a JWT access token by <see cref="Controllers.AuthController.Login"/>.
 /// </summary>
 public class LoginDto
 {
