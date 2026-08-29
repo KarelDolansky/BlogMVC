@@ -1,11 +1,13 @@
+using BlogMVC.Dto;
 using BlogMVC.Models;
+using BlogMVC.Results;
 
 namespace BlogMVC.Services;
 
 /// <summary>
-/// Application (business) layer for working with blog posts.
-/// Sits between controllers and the data layer (<see cref="BlogMVC.Infrastructure.Interfaces.IPostRepository"/>) –
-/// handles mapping DTOs to entities and filling in derived values (author, publish/modified timestamps).
+///     Application (business) layer for working with blog posts.
+///     Sits between controllers and the data layer (<see cref="BlogMVC.Infrastructure.Interfaces.IPostRepository" />) –
+///     handles mapping DTOs to entities and filling in derived values (author, publish/modified timestamps).
 /// </summary>
 public interface IPostService
 {
@@ -16,8 +18,8 @@ public interface IPostService
     Task<Post?> GetPostAsync(string id);
 
     /// <summary>
-    /// Creates a new post from a <see cref="CreatePostDto"/> and fills in the author
-    /// and the publish/modified timestamps.
+    ///     Creates a new post from a <see cref="CreatePostDto" /> and fills in the author
+    ///     and the publish/modified timestamps.
     /// </summary>
     /// <param name="createPostDto">Input data (title, content) from the user.</param>
     /// <param name="authorId">Id of the logged-in user creating the post.</param>
@@ -27,9 +29,16 @@ public interface IPostService
     /// <summary>Deletes a post by Id. Returns true if it was deleted.</summary>
     Task<bool> DeletePostAsync(string id);
 
-    /// <summary>Updates the title and content of an existing post and refreshes the modified date. Returns true on success.</summary>
-    Task<bool> EditPostAsync(string id, EditPostDto editPostDto);
+    /// <summary>Updates a post's title/content if <paramref name="expectedVersion" /> still matches its current version.</summary>
+    Task<PostUpdateResult> EditPostAsync(string id, EditPostDto editPostDto, long expectedVersion);
 
     /// <summary>Bulk-creates multiple posts at once with the same author.</summary>
     Task<IReadOnlyList<Post>> AddBulkPostAsync(List<CreatePostDto> createPostDtoes, string authorId, string author);
+
+    /// <summary>
+    ///     Searches posts by a case-insensitive match against their title or description.
+    /// </summary>
+    /// <param name="query">The text to search for.</param>
+    /// <returns>Matching posts, ordered from the most recently published.</returns>
+    Task<IReadOnlyList<Post>> SearchAsync(string query);
 }

@@ -1,175 +1,151 @@
 using BlogMVC.Controllers;
+using BlogMVC.Dto;
+using BlogMVC.Responses;
+using BlogMVC.Results;
 using BlogMVC.Services;
 using BlogMVC.Tests.Helpers;
-using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
-using SignInResult = Microsoft.AspNetCore.Identity.SignInResult;
 
 namespace BlogMVC.Tests.Controllers;
 
 /// <summary>
-///     Unit tests for <see cref="AuthController" /> using mocked <see cref="UserManager{TUser}" />,
-///     <see cref="SignInManager{TUser}" /> and <see cref="ITokenService" />.
-///     Verify the returned status code/body depending on whether the user exists, the password
-///     is correct, and whether the account is locked out.
+///     Unit tests for <see cref="AuthController" /> using a mocked <see cref="IAuthService" />.
+///     Verify that the controller maps each <see cref="LoginResult" /> to the correct status
+///     code/body, without any Identity/JWT logic of its own.
 /// </summary>
 public class AuthControllerTests
 {
     private readonly AuthController _authController;
-    private readonly string _defaultEmail = "test@example.com";
-    private readonly string _defaultPassword = "Password123!";
+    private readonly Mock<IAuthService> _authServiceMock;
     private readonly string _defaultToken = "fake-jwt-token";
-
-    private readonly IdentityUser _defaultUser = new()
-    {
-        Id = "defaultUserId",
-        Email = "test@example.com",
-        UserName = "test@example.com"
-    };
-
-    private readonly Mock<SignInManager<IdentityUser>> _signInManagerMock;
-    private readonly Mock<ITokenService> _tokenServiceMock;
-    private readonly Mock<UserManager<IdentityUser>> _userManagerMock;
 
     public AuthControllerTests()
     {
-        _userManagerMock = CreateUserManagerMock();
-        _signInManagerMock = CreateSignInManagerMock(_userManagerMock.Object);
-        _tokenServiceMock = new Mock<ITokenService>();
-
-        _authController = new AuthController(
-            _userManagerMock.Object,
-            _tokenServiceMock.Object,
-            _signInManagerMock.Object);
-    }
-
-    /// <summary>Builds a mocked <see cref="UserManager{TUser}" /> (it has no parameterless constructor).</summary>
-    private static Mock<UserManager<IdentityUser>> CreateUserManagerMock()
-    {
-        var store = new Mock<IUserStore<IdentityUser>>();
-        return new Mock<UserManager<IdentityUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!,
-            null!);
-    }
-
-    /// <summary>Builds a mocked <see cref="SignInManager{TUser}" /> (it has no parameterless constructor).</summary>
-    private static Mock<SignInManager<IdentityUser>> CreateSignInManagerMock(UserManager<IdentityUser> userManager)
-    {
-        var contextAccessor = new Mock<IHttpContextAccessor>();
-        var claimsFactory = new Mock<IUserClaimsPrincipalFactory<IdentityUser>>();
-        return new Mock<SignInManager<IdentityUser>>(
-            userManager, contextAccessor.Object, claimsFactory.Object, null!, null!, null!, null!);
+        _authServiceMock = new Mock<IAuthService>();
+        _authController = new AuthController(_authServiceMock.Object);
     }
 
     // ---------- Login ----------
 
-    /// <summary>Verifies that Login with a non-existing email returns Unauthorized.</summary>
+    /// <summary>Verifies that Login with invalid credentials returns Unauthorized.</summary>
     [Fact]
-    public async Task Login_WithNonExistingEmail_ReturnsUnauthorized()
+    public async Task Login_WithInvalidCredentials_ReturnsUnauthorized()
     {
         // Arrange
-        var loginDto = new LoginDtoFactory().WithEmail(_defaultEmail).Build();
-        _userManagerMock.Setup(u => u.FindByEmailAsync(_defaultEmail)).ReturnsAsync((IdentityUser?)null);
+        var loginDto = new LoginDtoFactory().Build();
+        _authServiceMock.Setup(a => a.LoginAsync(loginDto))
+            .ReturnsAsync(LoginResult.Failure(LoginFailureReason.InvalidCredentials));
 
         // Act
         var response = await _authController.Login(loginDto);
 
         // Assert
-        Assert.IsType<UnauthorizedObjectResult>(response);
+        var result = Assert.IsType<UnauthorizedObjectResult>(response.Result);
+        Assert.Equal("Invalid email or password", result.Value);
     }
 
-    /// <summary>Verifies that Login with a non-existing email does not attempt to sign in.</summary>
-    [Fact]
-    public async Task Login_WithNonExistingEmail_DoesNotCallCheckPasswordSignInAsync()
-    {
-        // Arrange
-        var loginDto = new LoginDtoFactory().WithEmail(_defaultEmail).Build();
-        _userManagerMock.Setup(u => u.FindByEmailAsync(_defaultEmail)).ReturnsAsync((IdentityUser?)null);
-
-        // Act
-        await _authController.Login(loginDto);
-
-        // Assert
-        _signInManagerMock.Verify(
-            s => s.CheckPasswordSignInAsync(It.IsAny<IdentityUser>(), It.IsAny<string>(), It.IsAny<bool>()),
-            Times.Never);
-    }
-
-    /// <summary>Verifies that Login with a wrong password returns Unauthorized.</summary>
-    [Fact]
-    public async Task Login_WithWrongPassword_ReturnsUnauthorized()
-    {
-        // Arrange
-        var loginDto = new LoginDtoFactory().WithEmail(_defaultEmail).WithPassword(_defaultPassword).Build();
-        _userManagerMock.Setup(u => u.FindByEmailAsync(_defaultEmail)).ReturnsAsync(_defaultUser);
-        _signInManagerMock
-            .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
-            .ReturnsAsync(SignInResult.Failed);
-
-        // Act
-        var response = await _authController.Login(loginDto);
-
-        // Assert
-        Assert.IsType<UnauthorizedObjectResult>(response);
-    }
-
-    /// <summary>Verifies that Login when the account is locked out returns Unauthorized.</summary>
+    /// <summary>Verifies that Login when the account is locked out returns Unauthorized with the lockout message.</summary>
     [Fact]
     public async Task Login_WithLockedOutAccount_ReturnsUnauthorized()
     {
         // Arrange
-        var loginDto = new LoginDtoFactory().WithEmail(_defaultEmail).WithPassword(_defaultPassword).Build();
-        _userManagerMock.Setup(u => u.FindByEmailAsync(_defaultEmail)).ReturnsAsync(_defaultUser);
-        _signInManagerMock
-            .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
-            .ReturnsAsync(SignInResult.LockedOut);
+        var loginDto = new LoginDtoFactory().Build();
+        _authServiceMock.Setup(a => a.LoginAsync(loginDto))
+            .ReturnsAsync(LoginResult.Failure(LoginFailureReason.LockedOut));
 
         // Act
         var response = await _authController.Login(loginDto);
 
         // Assert
-        var result = Assert.IsType<UnauthorizedObjectResult>(response);
+        var result = Assert.IsType<UnauthorizedObjectResult>(response.Result);
         Assert.Equal("Account is temporarily locked out", result.Value);
     }
 
-    /// <summary>Verifies that Login with valid credentials returns Ok with a JWT token.</summary>
+    /// <summary>Verifies that Login with valid credentials returns Ok with the JWT token from the service.</summary>
     [Fact]
     public async Task Login_WithValidCredentials_ReturnsOkWithToken()
     {
         // Arrange
-        var loginDto = new LoginDtoFactory().WithEmail(_defaultEmail).WithPassword(_defaultPassword).Build();
-        _userManagerMock.Setup(u => u.FindByEmailAsync(_defaultEmail)).ReturnsAsync(_defaultUser);
-        _signInManagerMock
-            .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
-            .ReturnsAsync(SignInResult.Success);
-        _tokenServiceMock.Setup(t => t.CreateToken(_defaultUser)).Returns(_defaultToken);
+        var loginDto = new LoginDtoFactory().Build();
+        _authServiceMock.Setup(a => a.LoginAsync(loginDto))
+            .ReturnsAsync(LoginResult.Success(_defaultToken));
 
         // Act
         var response = await _authController.Login(loginDto);
 
         // Assert
-        var result = Assert.IsType<OkObjectResult>(response);
-        var token = result.Value!.GetType().GetProperty("token")!.GetValue(result.Value);
-        Assert.Equal(_defaultToken, token);
+        var result = Assert.IsType<OkObjectResult>(response.Result);
+        var tokenResponse = Assert.IsType<TokenResponse>(result.Value);
+        Assert.Equal(_defaultToken, tokenResponse.Token);
     }
 
-    /// <summary>Verifies that Login with valid credentials creates the token for the found user.</summary>
+    /// <summary>Verifies that Login passes the DTO through to the service unchanged.</summary>
     [Fact]
-    public async Task Login_WithValidCredentials_CreatesTokenForFoundUser()
+    public async Task Login_PassesLoginDto_ToAuthService()
     {
         // Arrange
-        var loginDto = new LoginDtoFactory().WithEmail(_defaultEmail).WithPassword(_defaultPassword).Build();
-        _userManagerMock.Setup(u => u.FindByEmailAsync(_defaultEmail)).ReturnsAsync(_defaultUser);
-        _signInManagerMock
-            .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
-            .ReturnsAsync(SignInResult.Success);
-        _tokenServiceMock.Setup(t => t.CreateToken(_defaultUser)).Returns(_defaultToken);
+        var loginDto = new LoginDtoFactory().WithEmail("someone@example.com").Build();
+        _authServiceMock.Setup(a => a.LoginAsync(It.IsAny<LoginDto>()))
+            .ReturnsAsync(LoginResult.Success(_defaultToken));
 
         // Act
         await _authController.Login(loginDto);
 
         // Assert
-        _tokenServiceMock.Verify(t => t.CreateToken(_defaultUser), Times.Once);
+        _authServiceMock.Verify(a => a.LoginAsync(loginDto), Times.Once);
+    }
+
+    // ---------- Register ----------
+
+    /// <summary>Verifies that Register with valid data returns Ok.</summary>
+    [Fact]
+    public async Task Register_WithValidData_ReturnsOk()
+    {
+        // Arrange
+        var registerDto = new RegisterDtoFactory().Build();
+        _authServiceMock.Setup(a => a.RegisterAsync(registerDto))
+            .ReturnsAsync(RegisterResult.Success());
+
+        // Act
+        var response = await _authController.Register(registerDto);
+
+        // Assert
+        Assert.IsType<OkObjectResult>(response.Result);
+    }
+
+    /// <summary>Verifies that Register when the service fails (e.g. duplicate email) returns BadRequest with the errors.</summary>
+    [Fact]
+    public async Task Register_WhenServiceFails_ReturnsBadRequestWithErrors()
+    {
+        // Arrange
+        var registerDto = new RegisterDtoFactory().Build();
+        var errors = new[] { "Email 'test@example.com' is already taken." };
+        _authServiceMock.Setup(a => a.RegisterAsync(registerDto))
+            .ReturnsAsync(RegisterResult.Failure(errors));
+
+        // Act
+        var response = await _authController.Register(registerDto);
+
+        // Assert
+        var result = Assert.IsType<BadRequestObjectResult>(response.Result);
+        var errorResponse = Assert.IsType<ErrorResponse>(result.Value);
+        Assert.Equal(errors, errorResponse.Errors);
+    }
+
+    /// <summary>Verifies that Register passes the DTO through to the service unchanged.</summary>
+    [Fact]
+    public async Task Register_PassesRegisterDto_ToAuthService()
+    {
+        // Arrange
+        var registerDto = new RegisterDtoFactory().WithEmail("someone@example.com").Build();
+        _authServiceMock.Setup(a => a.RegisterAsync(It.IsAny<RegisterDto>()))
+            .ReturnsAsync(RegisterResult.Success());
+
+        // Act
+        await _authController.Register(registerDto);
+
+        // Assert
+        _authServiceMock.Verify(a => a.RegisterAsync(registerDto), Times.Once);
     }
 }

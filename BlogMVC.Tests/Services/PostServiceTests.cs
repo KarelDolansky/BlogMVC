@@ -1,5 +1,7 @@
-﻿using BlogMVC.Infrastructure.Interfaces;
+﻿using BlogMVC.Dto;
+using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Models;
+using BlogMVC.Results;
 using BlogMVC.Services;
 using BlogMVC.Tests.Helpers;
 using Moq;
@@ -7,13 +9,13 @@ using Moq;
 namespace BlogMVC.Tests.Services;
 
 /// <summary>
-/// Unit tests for <see cref="PostService"/> using a mocked <see cref="IPostRepository"/> and
-/// <see cref="IDateTimeProvider"/>. Verify correct mapping from DTOs to the <see cref="Post"/> entity,
-/// timestamp assignment, and delegation of calls to the repository.
+///     Unit tests for <see cref="PostService" /> using a mocked <see cref="IPostRepository" /> and
+///     <see cref="IDateTimeProvider" />. Verify correct mapping from DTOs to the <see cref="Post" /> entity,
+///     timestamp assignment, and delegation of calls to the repository.
 /// </summary>
 public class PostServiceTests
 {
-    static readonly DateTime DefaultDate = new DateTime(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime DefaultDate = new(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
     private readonly Mock<IDateTimeProvider> _dateTimeProviderMock;
     private readonly string _defaultAuthor = "defaultAuthor";
     private readonly string _defaultAuthorId = "defaultAuthorId";
@@ -63,7 +65,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
-    /// <summary>Verifies that AddPostAsync maps the title and content from the DTO.</summary>
+    /// <summary>Verifies that AddPostAsync maps the title, description and content from the DTO.</summary>
     [Fact]
     public async Task AddPostAsync_MapsTitleAndContent_FromDto()
     {
@@ -72,6 +74,7 @@ public class PostServiceTests
 
         var createPostDto = new CreatePostDtoFactory()
             .WithTitle("Title1")
+            .WithDescription("Description1")
             .WithContent("Content1")
             .Build();
 
@@ -81,6 +84,7 @@ public class PostServiceTests
         // Assert
         _postRepositoryMock.Verify(p => p.InsertOneAsync(It.Is<Post>(post =>
             post.Title == "Title1" &&
+            post.Description == "Description1" &&
             post.Content == "Content1"
         )), Times.Once);
     }
@@ -112,12 +116,14 @@ public class PostServiceTests
         _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
 
         var createPostDto = new CreatePostDtoFactory()
-            .WithTitle("Title")
-            .WithContent("Content")
+            .WithTitle("Title1")
+            .WithDescription("Description1")
+            .WithContent("Content1")
             .Build();
         var insertedPost = new PostFactory()
-            .WithTitle("Title")
-            .WithContent("Content")
+            .WithTitle("Title1")
+            .WithDescription("Description1")
+            .WithContent("Content1")
             .Build();
 
         _postRepositoryMock
@@ -143,7 +149,7 @@ public class PostServiceTests
         var createPostDtoes = new List<CreatePostDto>
         {
             new CreatePostDtoFactory().WithTitle("Title1").WithContent("Content1").Build(),
-            new CreatePostDtoFactory().WithTitle("Title2").WithContent("Content2").Build(),
+            new CreatePostDtoFactory().WithTitle("Title2").WithContent("Content2").Build()
         };
 
         // Act
@@ -156,7 +162,7 @@ public class PostServiceTests
         )), Times.Once);
     }
 
-    /// <summary>Verifies that AddBulkPostAsync maps the title and content for each DTO.</summary>
+    /// <summary>Verifies that AddBulkPostAsync maps the title, description and content for each DTO.</summary>
     [Fact]
     public async Task AddBulkPostAsync_MapsTitleAndContent_ForEachDto()
     {
@@ -165,8 +171,10 @@ public class PostServiceTests
 
         var createPostDtoes = new List<CreatePostDto>
         {
-            new CreatePostDtoFactory().WithTitle("Title1").WithContent("Content1").Build(),
-            new CreatePostDtoFactory().WithTitle("Title2").WithContent("Content2").Build()
+            new CreatePostDtoFactory().WithTitle("Title1").WithDescription("Description1").WithContent("Content1")
+                .Build(),
+            new CreatePostDtoFactory().WithTitle("Title2").WithDescription("Description2").WithContent("Content2")
+                .Build()
         };
 
         // Act
@@ -174,8 +182,8 @@ public class PostServiceTests
 
         // Assert
         _postRepositoryMock.Verify(p => p.InsertManyAsync(It.Is<List<Post>>(posts =>
-            posts[0].Title == "Title1" && posts[0].Content == "Content1" &&
-            posts[1].Title == "Title2" && posts[1].Content == "Content2"
+            posts[0].Title == "Title1" && posts[0].Description == "Description1" && posts[0].Content == "Content1" &&
+            posts[1].Title == "Title2" && posts[1].Description == "Description2" && posts[1].Content == "Content2"
         )), Times.Once);
     }
 
@@ -226,12 +234,12 @@ public class PostServiceTests
 
         var createPostDtoes = new List<CreatePostDto>
         {
-            new CreatePostDtoFactory().WithTitle("Title1").WithContent("Content1").Build(),
+            new CreatePostDtoFactory().WithTitle("Title1").WithContent("Content1").Build()
         };
 
         var insertedPosts = new List<Post>
         {
-            new PostFactory().WithTitle("Title1").WithContent("Content1").Build(),
+            new PostFactory().WithTitle("Title1").WithContent("Content1").Build()
         };
 
         _postRepositoryMock
@@ -256,7 +264,7 @@ public class PostServiceTests
         {
             new PostFactory().WithTitle("Title1").WithContent("Content1").Build(),
             new PostFactory().WithTitle("Title2").WithContent("Content2").Build(),
-            new PostFactory().WithTitle("Title3").WithContent("Content3").Build(),
+            new PostFactory().WithTitle("Title3").WithContent("Content3").Build()
         };
         _postRepositoryMock.Setup(p => p.FindAllAsync()).ReturnsAsync(posts);
 
@@ -358,21 +366,22 @@ public class PostServiceTests
         var post = new PostFactory()
             .Build();
         _postRepositoryMock.Setup(p => p.FindAsync("1")).ReturnsAsync(post);
-        _postRepositoryMock.Setup(p => p.ReplaceOneAsync("1", It.IsAny<Post>())).ReturnsAsync(true);
+        _postRepositoryMock.Setup(p => p.ReplaceOneAsync("1", 0, It.IsAny<Post>()))
+            .ReturnsAsync(PostUpdateResult.Success);
 
         var editPostDto = new EditPostDtoFactory()
             .Build();
 
         // Act
-        await _postService.EditPostAsync("1", editPostDto);
+        await _postService.EditPostAsync("1", editPostDto, 0);
 
         // Assert
-        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", It.Is<Post>(post1 =>
+        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", 0, It.Is<Post>(post1 =>
             post1.ModifiedDate == DefaultDate
         )), Times.Once);
     }
 
-    /// <summary>Verifies that EditPostAsync maps the title and content from the DTO.</summary>
+    /// <summary>Verifies that EditPostAsync maps the title, description and content from the DTO.</summary>
     [Fact]
     public async Task EditPostAsync_MapsTitleAndContent_FromDto()
     {
@@ -381,20 +390,23 @@ public class PostServiceTests
 
         var editPostDto = new EditPostDtoFactory()
             .WithTitle("Title1")
+            .WithDescription("Description1")
             .WithContent("Content1")
             .Build();
 
         var post = new PostFactory()
             .Build();
         _postRepositoryMock.Setup(p => p.FindAsync("1")).ReturnsAsync(post);
-        _postRepositoryMock.Setup(p => p.ReplaceOneAsync("1", It.IsAny<Post>())).ReturnsAsync(true);
+        _postRepositoryMock.Setup(p => p.ReplaceOneAsync("1", 0, It.IsAny<Post>()))
+            .ReturnsAsync(PostUpdateResult.Success);
 
         // Act
-        await _postService.EditPostAsync("1", editPostDto);
+        await _postService.EditPostAsync("1", editPostDto, 0);
 
         // Assert
-        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", It.Is<Post>(post1 =>
+        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", 0, It.Is<Post>(post1 =>
             post1.Title == "Title1" &&
+            post1.Description == "Description1" &&
             post1.Content == "Content1"
         )), Times.Once);
     }
@@ -412,45 +424,68 @@ public class PostServiceTests
             .WithAuthorId("OriginalAuthorId")
             .Build();
         _postRepositoryMock.Setup(p => p.FindAsync("1")).ReturnsAsync(originalPost);
-        _postRepositoryMock.Setup(p => p.ReplaceOneAsync("1", It.IsAny<Post>())).ReturnsAsync(true);
+        _postRepositoryMock.Setup(p => p.ReplaceOneAsync("1", 0, It.IsAny<Post>()))
+            .ReturnsAsync(PostUpdateResult.Success);
 
         var editPostDto = new EditPostDtoFactory()
             .Build();
 
         // Act
-        await _postService.EditPostAsync("1", editPostDto);
+        await _postService.EditPostAsync("1", editPostDto, 0);
 
         // Assert
-        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", It.Is<Post>(post1 =>
+        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", 0, It.Is<Post>(post1 =>
             post1.PublishDate == originalPost.PublishDate &&
             post1.Author == "OriginalAuthor" &&
             post1.AuthorId == "OriginalAuthorId"
         )), Times.Once);
     }
 
-    /// <summary>Verifies that EditPostAsync with an existing Id returns true.</summary>
+    /// <summary>Verifies that EditPostAsync increments the version of the post it fetched.</summary>
     [Fact]
-    public async Task EditPostAsync_WithExistingId_ReturnsTrue()
+    public async Task EditPostAsync_IncrementsVersion_OfFetchedPost()
+    {
+        // Arrange
+        _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
+        var post = new PostFactory().WithVersion(5).Build();
+        _postRepositoryMock.Setup(p => p.FindAsync("1")).ReturnsAsync(post);
+        _postRepositoryMock.Setup(p => p.ReplaceOneAsync("1", 5, It.IsAny<Post>()))
+            .ReturnsAsync(PostUpdateResult.Success);
+        var editPostDto = new EditPostDtoFactory().Build();
+
+        // Act
+        await _postService.EditPostAsync("1", editPostDto, 5);
+
+        // Assert
+        _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", 5, It.Is<Post>(post1 =>
+            post1.Version == 6
+        )), Times.Once);
+    }
+
+    /// <summary>Verifies that EditPostAsync with an existing Id returns Success.</summary>
+    [Fact]
+    public async Task EditPostAsync_WithExistingId_ReturnsSuccess()
     {
         // Arrange
         _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
         var post = new PostFactory()
             .Build();
         _postRepositoryMock.Setup(p => p.FindAsync("1")).ReturnsAsync(post);
-        _postRepositoryMock.Setup(p => p.ReplaceOneAsync("1", It.IsAny<Post>())).ReturnsAsync(true);
+        _postRepositoryMock.Setup(p => p.ReplaceOneAsync("1", 0, It.IsAny<Post>()))
+            .ReturnsAsync(PostUpdateResult.Success);
         var editPostDto = new EditPostDtoFactory()
             .Build();
 
         // Act
-        var result = await _postService.EditPostAsync("1", editPostDto);
+        var result = await _postService.EditPostAsync("1", editPostDto, 0);
 
         // Assert
-        Assert.True(result);
+        Assert.Equal(PostUpdateResult.Success, result);
     }
 
-    /// <summary>Verifies that EditPostAsync with a non-existing Id returns false.</summary>
+    /// <summary>Verifies that EditPostAsync with a non-existing Id returns NotFound.</summary>
     [Fact]
-    public async Task EditPostAsync_WithNonExistingId_ReturnsFalse()
+    public async Task EditPostAsync_WithNonExistingId_ReturnsNotFound()
     {
         // Arrange
         _postRepositoryMock.Setup(p => p.FindAsync("missing")).ReturnsAsync((Post?)null);
@@ -458,10 +493,10 @@ public class PostServiceTests
             .Build();
 
         // Act
-        var result = await _postService.EditPostAsync("missing", editPostDto);
+        var result = await _postService.EditPostAsync("missing", editPostDto, 0);
 
         // Assert
-        Assert.False(result);
+        Assert.Equal(PostUpdateResult.NotFound, result);
     }
 
     /// <summary>Verifies that EditPostAsync with a non-existing Id does not call ReplaceOneAsync.</summary>
@@ -474,29 +509,80 @@ public class PostServiceTests
             .Build();
 
         // Act
-        await _postService.EditPostAsync("missing", editPostDto);
+        await _postService.EditPostAsync("missing", editPostDto, 0);
 
         // Assert
-        _postRepositoryMock.Verify(p => p.ReplaceOneAsync(It.IsAny<string>(), It.IsAny<Post>()), Times.Never);
+        _postRepositoryMock.Verify(p => p.ReplaceOneAsync(It.IsAny<string>(), It.IsAny<long>(), It.IsAny<Post>()),
+            Times.Never);
     }
 
-    /// <summary>Verifies that EditPostAsync when the repository fails to replace the document returns false.</summary>
+    /// <summary>Verifies that EditPostAsync returns Conflict when the repository reports a stale version.</summary>
     [Fact]
-    public async Task EditPostAsync_WhenRepositoryFailsToReplace_ReturnsFalse()
+    public async Task EditPostAsync_WhenRepositoryReportsConflict_ReturnsConflict()
     {
         // Arrange
         _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
         var post = new PostFactory()
             .Build();
         _postRepositoryMock.Setup(p => p.FindAsync("1")).ReturnsAsync(post);
-        _postRepositoryMock.Setup(p => p.ReplaceOneAsync("1", It.IsAny<Post>())).ReturnsAsync(false);
+        _postRepositoryMock.Setup(p => p.ReplaceOneAsync("1", 0, It.IsAny<Post>()))
+            .ReturnsAsync(PostUpdateResult.Conflict);
         var editPostDto = new EditPostDtoFactory()
             .Build();
 
         // Act
-        var result = await _postService.EditPostAsync("1", editPostDto);
+        var result = await _postService.EditPostAsync("1", editPostDto, 0);
 
         // Assert
-        Assert.False(result);
+        Assert.Equal(PostUpdateResult.Conflict, result);
+    }
+
+    // ---------- SearchAsync ----------
+
+    /// <summary>Verifies that SearchAsync returns the matching posts from the repository.</summary>
+    [Fact]
+    public async Task SearchAsync_ReturnsMatchingPosts_FromRepository()
+    {
+        // Arrange
+        var posts = new List<Post>
+        {
+            new PostFactory().WithTitle("Title1").Build(),
+            new PostFactory().WithTitle("Title2").Build()
+        };
+        _postRepositoryMock.Setup(p => p.SearchAsync("term")).ReturnsAsync(posts);
+
+        // Act
+        var result = await _postService.SearchAsync("term");
+
+        // Assert
+        Assert.Equal(posts, result);
+    }
+
+    /// <summary>Verifies that SearchAsync passes the query through to the repository unchanged.</summary>
+    [Fact]
+    public async Task SearchAsync_PassesQuery_ToRepository()
+    {
+        // Arrange
+        _postRepositoryMock.Setup(p => p.SearchAsync(It.IsAny<string>())).ReturnsAsync(new List<Post>());
+
+        // Act
+        await _postService.SearchAsync("some query");
+
+        // Assert
+        _postRepositoryMock.Verify(p => p.SearchAsync("some query"), Times.Once);
+    }
+
+    /// <summary>Verifies that SearchAsync when there are no matches returns an empty list.</summary>
+    [Fact]
+    public async Task SearchAsync_WithNoMatches_ReturnsEmptyList()
+    {
+        // Arrange
+        _postRepositoryMock.Setup(p => p.SearchAsync("nothing-matches")).ReturnsAsync(new List<Post>());
+
+        // Act
+        var result = await _postService.SearchAsync("nothing-matches");
+
+        // Assert
+        Assert.Empty(result);
     }
 }

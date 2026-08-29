@@ -3,33 +3,33 @@ using BlogMVC.Dto;
 namespace BlogMVC.Tests.Helpers;
 
 /// <summary>
-///     Test Data Builder for creating <see cref="LoginDto"/> instances in tests,
+///     Test Data Builder for creating <see cref="RegisterDto" /> instances in tests,
 ///     with sensible defaults and fluent methods to override individual fields.
 /// </summary>
-public class LoginDtoFactory
+public class RegisterDtoFactory
 {
-    private LoginDto _entity = new LoginDto
+    private readonly RegisterDto _entity = new()
     {
         Email = "test@example.com",
-        Password = "Password123!",
+        Password = "Password123!"
     };
 
     /// <summary>Sets the email.</summary>
-    public LoginDtoFactory WithEmail(string email)
+    public RegisterDtoFactory WithEmail(string email)
     {
         _entity.Email = email;
         return this;
     }
 
     /// <summary>Sets the password.</summary>
-    public LoginDtoFactory WithPassword(string password)
+    public RegisterDtoFactory WithPassword(string password)
     {
         _entity.Password = password;
         return this;
     }
 
-    /// <summary>Returns the built <see cref="LoginDto"/> instance.</summary>
-    public LoginDto Build()
+    /// <summary>Returns the built <see cref="RegisterDto" /> instance.</summary>
+    public RegisterDto Build()
     {
         return _entity;
     }

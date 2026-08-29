@@ -4,14 +4,14 @@ using MongoDB.Bson.Serialization.Attributes;
 namespace BlogMVC.Models;
 
 /// <summary>
-/// Domain model representing a single blog post stored in MongoDB.
-/// Used as the read/write entity via <see cref="BlogMVC.Infrastructure.Interfaces.IPostRepository"/>.
+///     Domain model representing a single blog post stored in MongoDB.
+///     Used as the read/write entity via <see cref="BlogMVC.Infrastructure.Interfaces.IPostRepository" />.
 /// </summary>
 public class Post
 {
     /// <summary>
-    /// Unique identifier of the post (MongoDB ObjectId stored as a string).
-    /// Null until the document is persisted (MongoDB assigns the id itself).
+    ///     Unique identifier of the post (MongoDB ObjectId stored as a string).
+    ///     Null until the document is persisted (MongoDB assigns the id itself).
     /// </summary>
     [BsonId]
     [BsonRepresentation(BsonType.ObjectId)]
@@ -19,6 +19,9 @@ public class Post
 
     /// <summary>Title of the post.</summary>
     public required string Title { get; set; }
+
+    /// <summary>Short description of the post.</summary>
+    public required string Description { get; set; }
 
     /// <summary>Text content (body) of the post.</summary>
     public required string Content { get; set; }
@@ -34,4 +37,7 @@ public class Post
 
     /// <summary>Date and time the post was last modified.</summary>
     public DateTime ModifiedDate { get; set; }
+
+    /// <summary>Optimistic-concurrency token, incremented on every edit. Exposed as an ETag, not a JSON field.</summary>
+    public long Version { get; set; }
 }

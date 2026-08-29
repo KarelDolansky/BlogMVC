@@ -1,8 +1,8 @@
 namespace BlogMVC.Models;
 
 /// <summary>
-/// Configuration model for the MongoDB connection, bound from the "MongoDb"
-/// section in appsettings.json via IOptions&lt;MongoDbSettings&gt;.
+///     Configuration model for the MongoDB connection, bound from the "MongoDb"
+///     section in appsettings.json via IOptions&lt;MongoDbSettings&gt;.
 /// </summary>
 public class MongoDbSettings
 {

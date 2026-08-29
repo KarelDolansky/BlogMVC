@@ -1,10 +1,11 @@
 # BlogMVC
 
-A blog application built with ASP.NET Core MVC and MongoDB.
+A blog REST API built with ASP.NET Core and MongoDB.
 
 ## Features
-- View, create, edit, and delete blog posts (web UI, cookie-based Identity login)
-- REST API for post management (`api/blog`) and JWT login (`api/auth/login`)
+- REST API for post management (`api/blog`) and JWT auth (`api/auth/register`, `api/auth/login`)
+- ASP.NET Core Identity (SQLite) for user accounts, exchanged for JWTs via `api/auth/login`
+- Optimistic concurrency on post edits via ETag/If-Match, so concurrent edits don't silently overwrite each other
 - Unit and integration tests
 
 ## Prerequisites
@@ -24,11 +25,21 @@ secrets, ...) — these values are intentionally not committed in `appsettings.j
 
 ## REST API Authentication
 
-1. `POST api/auth/login` with `{ "email": "...", "password": "..." }` for an existing,
-   confirmed Identity account (register one via the web UI first). Returns `{ "token": "..." }`.
-2. Send that token as `Authorization: Bearer {token}` on the write endpoints of `api/blog`
+1. `POST api/auth/register` with `{ "email": "...", "password": "..." }` to create an Identity
+   account. The account is created locked out — an administrator must clear `LockoutEnd` on its
+   `AspNetUsers` row before it can log in (there is no email confirmation flow).
+2. `POST api/auth/login` with `{ "email": "...", "password": "..." }` for that account.
+   Returns `{ "token": "..." }`.
+3. Send that token as `Authorization: Bearer {token}` on the write endpoints of `api/blog`
    (POST, POST bulk, PUT, DELETE). Reading posts (GET) does not require a token.
-3. Editing or deleting a post additionally requires the token's user to be that post's author.
+4. Editing or deleting a post additionally requires the token's user to be that post's author.
+
+## Concurrency
+
+`GET api/blog/{id}` returns the post's version as an `ETag` response header. `PUT api/blog/{id}`
+requires that value back as an `If-Match` request header: missing it returns 400, and a
+mismatched (stale) value returns 412 Precondition Failed instead of silently overwriting a
+concurrent edit.
 
 ## Running Tests
 
@@ -37,7 +48,7 @@ dotnet test BlogMVC.sln
 ```
 
 ## Tech Stack
-- ASP.NET Core MVC
+- ASP.NET Core Web API
 - MongoDB
 - ASP.NET Core Identity + JWT bearer authentication
 - xUnit, Moq

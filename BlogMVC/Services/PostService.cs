@@ -1,11 +1,13 @@
+using BlogMVC.Dto;
 using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Models;
+using BlogMVC.Results;
 
 namespace BlogMVC.Services;
 
 /// <summary>
-/// Default implementation of <see cref="IPostService"/>. Uses <see cref="IDateTimeProvider"/>
-/// for a testable timestamp and <see cref="IPostRepository"/> for persistence in MongoDB.
+///     Default implementation of <see cref="IPostService" />. Uses <see cref="IDateTimeProvider" />
+///     for a testable timestamp and <see cref="IPostRepository" /> for persistence in MongoDB.
 /// </summary>
 public class PostService(IDateTimeProvider dateTimeProvider, IPostRepository postRepository) : IPostService
 {
@@ -29,6 +31,7 @@ public class PostService(IDateTimeProvider dateTimeProvider, IPostRepository pos
         var post = new Post
         {
             Title = createPostDto.Title,
+            Description = createPostDto.Description,
             Content = createPostDto.Content,
             AuthorId = authorId,
             Author = author,
@@ -50,6 +53,7 @@ public class PostService(IDateTimeProvider dateTimeProvider, IPostRepository pos
             var post = new Post
             {
                 Title = createPostDto.Title,
+                Description = createPostDto.Description,
                 Content = createPostDto.Content,
                 AuthorId = authorId,
                 Author = author,
@@ -69,14 +73,22 @@ public class PostService(IDateTimeProvider dateTimeProvider, IPostRepository pos
     }
 
     /// <inheritdoc />
-    public async Task<bool> EditPostAsync(string id, EditPostDto editPostDto)
+    public async Task<PostUpdateResult> EditPostAsync(string id, EditPostDto editPostDto, long expectedVersion)
     {
         // Load the existing document first so unchanged fields (Author, PublishDate...) are preserved.
         var post = await postRepository.FindAsync(id);
-        if (post == null) return false;
+        if (post == null) return PostUpdateResult.NotFound;
         post.Title = editPostDto.Title;
         post.Content = editPostDto.Content;
+        post.Description = editPostDto.Description;
         post.ModifiedDate = dateTimeProvider.Now;
-        return await postRepository.ReplaceOneAsync(id, post);
+        post.Version += 1;
+        return await postRepository.ReplaceOneAsync(id, expectedVersion, post);
+    }
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<Post>> SearchAsync(string query)
+    {
+        return await postRepository.SearchAsync(query);
     }
 }
