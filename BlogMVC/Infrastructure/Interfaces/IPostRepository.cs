@@ -4,8 +4,8 @@ using BlogMVC.Results;
 namespace BlogMVC.Infrastructure.Interfaces;
 
 /// <summary>
-/// Data-access abstraction for working with posts stored in MongoDB.
-/// Decouples the service layer (<see cref="BlogMVC.Services.IPostService"/>) from the concrete storage implementation.
+///     Data-access abstraction for working with posts stored in MongoDB.
+///     Decouples the service layer (<see cref="BlogMVC.Services.IPostService"/>) from the concrete storage implementation.
 /// </summary>
 public interface IPostRepository
 {
