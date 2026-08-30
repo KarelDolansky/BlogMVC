@@ -1,3 +1,4 @@
+using BlogMVC.Data;
 using BlogMVC.Dto;
 using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Results;
@@ -43,6 +44,9 @@ public class AuthService(
         // Lock the account until an administrator approves it, in place of email confirmation.
         await userManager.SetLockoutEnabledAsync(user, true);
         await userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
+
+        // Every new account starts as a Commentator; an administrator can grant a higher role later.
+        await userManager.AddToRoleAsync(user, Roles.Commentator);
 
         return RegisterResult.Success();
     }
