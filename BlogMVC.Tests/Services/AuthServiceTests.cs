@@ -1,3 +1,4 @@
+using BlogMVC.Data;
 using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Results;
 using BlogMVC.Services;
@@ -261,6 +262,28 @@ public class AuthServiceTests
         _userManagerMock.Verify(u => u.SetLockoutEndDateAsync(createdUser!, DateTimeOffset.MaxValue), Times.Once);
     }
 
+    /// <summary>Verifies that RegisterAsync assigns the default Commentator role to the newly created account.</summary>
+    [Fact]
+    public async Task RegisterAsync_WithValidData_AssignsCommentatorRole()
+    {
+        // Arrange
+        var registerDto = new RegisterDtoFactory().Build();
+        IdentityUser? createdUser = null;
+        _userManagerMock
+            .Setup(u => u.CreateAsync(It.IsAny<IdentityUser>(), It.IsAny<string>()))
+            .Callback<IdentityUser, string>((user, _) => createdUser = user)
+            .ReturnsAsync(IdentityResult.Success);
+        _userManagerMock
+            .Setup(u => u.AddToRoleAsync(It.IsAny<IdentityUser>(), Roles.Commentator))
+            .ReturnsAsync(IdentityResult.Success);
+
+        // Act
+        await _authService.RegisterAsync(registerDto);
+
+        // Assert
+        _userManagerMock.Verify(u => u.AddToRoleAsync(createdUser!, Roles.Commentator), Times.Once);
+    }
+
     /// <summary>Verifies that RegisterAsync when account creation fails (e.g. duplicate email) returns the Identity errors.</summary>
     [Fact]
     public async Task RegisterAsync_WhenCreateFails_ReturnsFailureWithErrors()
@@ -299,5 +322,7 @@ public class AuthServiceTests
         _userManagerMock.Verify(u => u.SetLockoutEnabledAsync(It.IsAny<IdentityUser>(), It.IsAny<bool>()), Times.Never);
         _userManagerMock.Verify(
             u => u.SetLockoutEndDateAsync(It.IsAny<IdentityUser>(), It.IsAny<DateTimeOffset?>()), Times.Never);
+        _userManagerMock.Verify(
+            u => u.AddToRoleAsync(It.IsAny<IdentityUser>(), It.IsAny<string>()), Times.Never);
     }
 }

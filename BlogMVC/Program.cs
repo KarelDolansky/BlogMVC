@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text;
 using BlogMVC.Data;
+using BlogMVC.Helpers;
 using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Infrastructure.Providers;
 using BlogMVC.Infrastructure.Repositories;
@@ -95,6 +96,9 @@ builder.Services.AddSingleton<ITokenProvider, TokenProvider>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
+
+// Seeds predefined Identity roles (no permissions attached yet, see BlogMVC.Data.Roles).
+await app.SeedIdentityRolesAsync();
 
 if (app.Environment.IsDevelopment())
 {

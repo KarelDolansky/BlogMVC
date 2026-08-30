@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
+using BlogMVC.Data;
 using BlogMVC.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -170,6 +171,40 @@ public class AuthControllerIntegrationTests(WebApplicationFactory<Program> facto
 
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
+    // ---------- Roles ----------
+
+    /// <summary>Verifies that all predefined roles are seeded into the Identity store at startup.</summary>
+    [Fact]
+    public async Task Roles_AreSeededAtStartup()
+    {
+        // Arrange
+        using var scope = Factory.Services.CreateScope();
+        var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+        // Act & Assert
+        foreach (var roleName in Roles.All)
+            Assert.True(await roleManager.RoleExistsAsync(roleName), $"Role '{roleName}' should be seeded.");
+    }
+
+    /// <summary>Verifies that Register with valid data assigns the default Commentator role to the new user.</summary>
+    [Fact]
+    public async Task Register_WithValidData_AssignsCommentatorRole()
+    {
+        // Arrange
+        var email = $"role-{Guid.NewGuid():N}@example.com";
+        var registerDto = new RegisterDtoFactory().WithEmail(email).WithPassword("Password123!").Build();
+
+        // Act
+        await Client.PostAsJsonAsync("/api/auth/register", registerDto);
+
+        // Assert
+        using var scope = Factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+        var user = await userManager.FindByEmailAsync(email);
+        var roles = await userManager.GetRolesAsync(user!);
+        Assert.Contains(Roles.Commentator, roles);
     }
 
     /// <summary>Verifies that Register with an already-registered email returns 400 Bad Request.</summary>

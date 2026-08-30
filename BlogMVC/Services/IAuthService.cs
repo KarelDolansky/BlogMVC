@@ -24,6 +24,7 @@ public interface IAuthService
     ///     to sign in (see <see cref="Program" />), so the new account is instead created locked out
     ///     indefinitely; an administrator must clear the lockout directly in the database (set
     ///     <c>LockoutEnd</c> to null on the <c>AspNetUsers</c> row) before the account can log in.
+    ///     The account is also assigned the default <see cref="Data.Roles.Commentator" /> role.
     /// </summary>
     Task<RegisterResult> RegisterAsync(RegisterDto registerDto);
 }

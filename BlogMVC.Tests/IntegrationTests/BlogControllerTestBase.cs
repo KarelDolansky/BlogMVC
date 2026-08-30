@@ -56,6 +56,16 @@ public abstract class BlogControllerTestBase : IClassFixture<WebApplicationFacto
         _identityConnection = new SqliteConnection("DataSource=:memory:");
         _identityConnection.Open();
 
+        // Create the Identity schema directly on the connection before the host starts: Program.cs seeds
+        // predefined roles during startup (triggered by Factory.CreateClient() below), which requires the
+        // AspNetRoles table to already exist.
+        var identityOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
+            .UseSqlite(_identityConnection).Options;
+        using (var db = new ApplicationDbContext(identityOptions))
+        {
+            db.Database.EnsureCreated();
+        }
+
         Factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
@@ -67,10 +77,6 @@ public abstract class BlogControllerTestBase : IClassFixture<WebApplicationFacto
         });
 
         Client = Factory.CreateClient();
-
-        using var scope = Factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        db.Database.EnsureCreated();
     }
 
     /// <summary>Clears all documents in the posts collection before every test so previous state doesn't leak in.</summary>
