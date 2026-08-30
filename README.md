@@ -34,6 +34,10 @@ secrets, ...) — these values are intentionally not committed in `appsettings.j
    (POST, POST bulk, PUT, DELETE). Reading posts (GET) does not require a token.
 4. Editing or deleting a post additionally requires the token's user to be that post's author.
 
+## Architecture
+
+For the request flow, folder structure, and layering, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
 ## Concurrency
 
 `GET api/blog/{id}` returns the post's version as an `ETag` response header. `PUT api/blog/{id}`
