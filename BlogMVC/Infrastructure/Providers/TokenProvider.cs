@@ -15,13 +15,14 @@ namespace BlogMVC.Infrastructure.Providers;
 public class TokenProvider(IConfiguration configuration, IDateTimeProvider dateTimeProvider) : ITokenProvider
 {
     /// <inheritdoc />
-    public string CreateToken(IdentityUser user)
+    public string CreateToken(IdentityUser user, IEnumerable<string> roles)
     {
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id),
             new Claim(ClaimTypes.Name, user.UserName!)
         };
+        claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

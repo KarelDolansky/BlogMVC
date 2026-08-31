@@ -1,3 +1,4 @@
+using BlogMVC.Data;
 using BlogMVC.Dto;
 using BlogMVC.Responses;
 using BlogMVC.Results;
@@ -8,7 +9,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace BlogMVC.Controllers;
 
-/// <summary>Blog posts API at "api/blog". Reading is public; writing requires a JWT, editing/deleting requires ownership.</summary>
+/// <summary>
+///     Blog posts API at "api/blog". Reading is public; creating requires a JWT with an
+///     Administrator/Editor/Author role (bulk creation additionally excludes Author); editing/deleting requires
+///     a JWT and ownership.
+/// </summary>
 [Route("api/[controller]")]
 [ApiController]
 public class BlogController(IPostService postService) : BaseApiController
@@ -32,9 +37,13 @@ public class BlogController(IPostService postService) : BaseApiController
         return Ok(PostResponse.FromPost(post));
     }
 
-    /// <summary>POST api/blog – creates a post; JWT required, author taken from the token's claims.</summary>
+    /// <summary>
+    ///     POST api/blog – creates a post; requires the Administrator, Editor or Author role, author taken from
+    ///     the token's claims.
+    /// </summary>
     [HttpPost]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme,
+        Roles = $"{Roles.Administrator},{Roles.Editor},{Roles.Author}")]
     public async Task<ActionResult<PostResponse>> CreatePost(CreatePostDto createPostDto)
     {
         var userId = GetUserId();
@@ -48,11 +57,12 @@ public class BlogController(IPostService postService) : BaseApiController
     }
 
     /// <summary>
-    ///     POST api/blog/bulk – creates multiple posts authored by the caller (same JWT requirement as
-    ///     <see cref="CreatePost" />).
+    ///     POST api/blog/bulk – creates multiple posts authored by the caller; requires the Administrator or
+    ///     Editor role — narrower than <see cref="CreatePost" />, which also allows Author.
     /// </summary>
     [HttpPost("bulk")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme,
+        Roles = $"{Roles.Administrator},{Roles.Editor}")]
     public async Task<ActionResult<IReadOnlyList<PostResponse>>> BulkCreatePosts(List<CreatePostDto> createPostDtoes)
     {
         var userId = GetUserId();

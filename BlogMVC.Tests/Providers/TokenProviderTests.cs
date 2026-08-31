@@ -22,6 +22,8 @@ public class TokenProviderTests
     private const string DefaultKey = "this-is-a-sufficiently-long-test-only-signing-key-1234567890";
     private static readonly DateTime DefaultDate = new(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+    private readonly string[] _defaultRoles = [];
+
     private readonly IdentityUser _defaultUser = new()
     {
         Id = "defaultUserId",
@@ -50,7 +52,7 @@ public class TokenProviderTests
     public void CreateToken_ReturnsNonEmptyToken()
     {
         // Act
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles);
 
         // Assert
         Assert.False(string.IsNullOrWhiteSpace(token));
@@ -61,7 +63,7 @@ public class TokenProviderTests
     public void CreateToken_IncludesNameIdentifierClaim_WithUserId()
     {
         // Act
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles);
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         // Assert
@@ -74,7 +76,7 @@ public class TokenProviderTests
     public void CreateToken_IncludesNameClaim_WithUserName()
     {
         // Act
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles);
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         // Assert
@@ -82,12 +84,37 @@ public class TokenProviderTests
         Assert.Equal(_defaultUser.UserName, claim.Value);
     }
 
+    /// <summary>Verifies that CreateToken includes one Role claim per role passed in.</summary>
+    [Fact]
+    public void CreateToken_IncludesRoleClaim_ForEachRole()
+    {
+        // Act
+        var token = _tokenProvider.CreateToken(_defaultUser, ["Author", "Editor"]);
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        // Assert
+        var roleClaims = jwt.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value);
+        Assert.Equal(["Author", "Editor"], roleClaims);
+    }
+
+    /// <summary>Verifies that CreateToken with no roles adds no Role claims.</summary>
+    [Fact]
+    public void CreateToken_WithNoRoles_AddsNoRoleClaims()
+    {
+        // Act
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles);
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        // Assert
+        Assert.DoesNotContain(jwt.Claims, c => c.Type == ClaimTypes.Role);
+    }
+
     /// <summary>Verifies that CreateToken sets the issuer and audience from configuration.</summary>
     [Fact]
     public void CreateToken_SetsIssuerAndAudience_FromConfiguration()
     {
         // Act
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles);
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         // Assert
@@ -100,7 +127,7 @@ public class TokenProviderTests
     public void CreateToken_SetsExpiration_OneHourFromDateTimeProviderNow()
     {
         // Act
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles);
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         // Assert
@@ -115,7 +142,7 @@ public class TokenProviderTests
     public void CreateToken_SignsTokenWithConfiguredKey_ValidatesWithSameKey()
     {
         // Arrange
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles);
         var validationParameters = new TokenValidationParameters
         {
             ValidIssuer = DefaultIssuer,
@@ -133,7 +160,7 @@ public class TokenProviderTests
     public void CreateToken_SignsTokenWithConfiguredKey_FailsValidationWithDifferentKey()
     {
         // Arrange
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles);
         var validationParameters = new TokenValidationParameters
         {
             ValidIssuer = DefaultIssuer,
