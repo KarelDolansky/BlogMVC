@@ -23,7 +23,7 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(connectionString));
 builder.Services.AddDatabaseDeveloperPageExceptionFilter();
 
-// Email confirmation is skipped; new accounts are created locked out instead (see AuthController.Register).
+// Email confirmation is skipped; new accounts are usable immediately (see AuthController.Register).
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => options.SignIn.RequireConfirmedAccount = false)
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
@@ -97,7 +97,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 var app = builder.Build();
 
-// Seeds predefined Identity roles (no permissions attached yet, see BlogMVC.Data.Roles).
+// Seeds predefined Identity roles; post-creation permissions per role are enforced on BlogController (see BlogMVC.Data.Roles).
 await app.SeedIdentityRolesAsync();
 
 if (app.Environment.IsDevelopment())

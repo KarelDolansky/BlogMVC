@@ -25,7 +25,7 @@ public class AuthController(IAuthService authService) : BaseApiController
         return Ok(new TokenResponse { Token = result.Token! });
     }
 
-    /// <summary>POST api/auth/register – creates a locked account pending admin approval; 400 with errors on failure.</summary>
+    /// <summary>POST api/auth/register – creates the account (as a Commentator); 400 with errors on failure.</summary>
     [HttpPost("register")]
     public async Task<ActionResult<RegisterResponse>> Register(RegisterDto registerDto)
     {
@@ -36,7 +36,7 @@ public class AuthController(IAuthService authService) : BaseApiController
 
         return Ok(new RegisterResponse
         {
-            Message = "Account created. It must be approved by an administrator before you can sign in."
+            Message = "Account created."
         });
     }
 }

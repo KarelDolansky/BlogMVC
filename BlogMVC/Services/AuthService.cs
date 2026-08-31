@@ -30,7 +30,8 @@ public class AuthService(
                 ? LoginResult.Failure(LoginFailureReason.LockedOut)
                 : LoginResult.Failure(LoginFailureReason.InvalidCredentials);
 
-        return LoginResult.Success(tokenProvider.CreateToken(user));
+        var roles = await userManager.GetRolesAsync(user);
+        return LoginResult.Success(tokenProvider.CreateToken(user, roles));
     }
 
     /// <inheritdoc />
@@ -40,10 +41,6 @@ public class AuthService(
         var createResult = await userManager.CreateAsync(user, registerDto.Password);
         if (!createResult.Succeeded)
             return RegisterResult.Failure(createResult.Errors.Select(e => e.Description));
-
-        // Lock the account until an administrator approves it, in place of email confirmation.
-        await userManager.SetLockoutEnabledAsync(user, true);
-        await userManager.SetLockoutEndDateAsync(user, DateTimeOffset.MaxValue);
 
         // Every new account starts as a Commentator; an administrator can grant a higher role later.
         await userManager.AddToRoleAsync(user, Roles.Commentator);

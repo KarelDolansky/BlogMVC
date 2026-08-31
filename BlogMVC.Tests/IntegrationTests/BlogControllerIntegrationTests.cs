@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using BlogMVC.Data;
 using BlogMVC.Dto;
 using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Models;
@@ -147,7 +148,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
     public async Task CreatePost_Authenticated_ReturnsCreatedAuthoredByCaller()
     {
         // Arrange
-        var (client, userId) = await CreateAuthenticatedClientAsync("author");
+        var (client, userId) = await CreateAuthenticatedClientAsync("author", role: Roles.Author);
         var createPostDto = new CreatePostDtoFactory().WithTitle("New Post").Build();
 
         // Act
@@ -159,6 +160,21 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal("New Post", created!.Title);
         Assert.Equal(userId, created.AuthorId);
         Assert.NotNull(response.Headers.Location);
+    }
+
+    /// <summary>Verifies that CreatePost as a Commentator (no post-creation role) returns 403 Forbidden.</summary>
+    [Fact]
+    public async Task CreatePost_AsCommentator_ReturnsForbidden()
+    {
+        // Arrange
+        var (client, _) = await CreateAuthenticatedClientAsync("commentator", role: Roles.Commentator);
+        var createPostDto = new CreatePostDtoFactory().Build();
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/blog", createPostDto);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     // ---------- BulkCreatePosts ----------
@@ -182,7 +198,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
     public async Task BulkCreatePosts_Authenticated_ReturnsCreatedAuthoredByCaller()
     {
         // Arrange
-        var (client, userId) = await CreateAuthenticatedClientAsync("bulk-author");
+        var (client, userId) = await CreateAuthenticatedClientAsync("bulk-editor", role: Roles.Editor);
         var dtos = new List<CreatePostDto>
         {
             new CreatePostDtoFactory().WithTitle("First").Build(),
@@ -197,6 +213,36 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
         var created = await response.Content.ReadFromJsonAsync<List<PostResponse>>();
         Assert.Equal(2, created!.Count);
         Assert.All(created, p => Assert.Equal(userId, p.AuthorId));
+    }
+
+    /// <summary>Verifies that BulkCreatePosts as an Author (single-post creation only) returns 403 Forbidden.</summary>
+    [Fact]
+    public async Task BulkCreatePosts_AsAuthor_ReturnsForbidden()
+    {
+        // Arrange
+        var (client, _) = await CreateAuthenticatedClientAsync("bulk-author", role: Roles.Author);
+        var dtos = new List<CreatePostDto> { new CreatePostDtoFactory().Build() };
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/blog/bulk", dtos);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>Verifies that BulkCreatePosts as a Commentator returns 403 Forbidden.</summary>
+    [Fact]
+    public async Task BulkCreatePosts_AsCommentator_ReturnsForbidden()
+    {
+        // Arrange
+        var (client, _) = await CreateAuthenticatedClientAsync("bulk-commentator", role: Roles.Commentator);
+        var dtos = new List<CreatePostDto> { new CreatePostDtoFactory().Build() };
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/blog/bulk", dtos);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     // ---------- EditPost ----------

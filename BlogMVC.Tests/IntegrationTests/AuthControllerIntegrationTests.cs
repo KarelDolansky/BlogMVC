@@ -121,49 +121,15 @@ public class AuthControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.NotNull(user);
     }
 
-    /// <summary>
-    ///     Verifies that a freshly registered account is created locked out (login fails as LockedOut, not
-    ///     InvalidCredentials).
-    /// </summary>
+    /// <summary>Verifies that a freshly registered account can log in immediately (no lockout/approval step).</summary>
     [Fact]
-    public async Task Register_WithValidData_CreatesAccountLockedOut()
+    public async Task Register_ThenLogin_Succeeds()
     {
         // Arrange
-        var email = $"locked-{Guid.NewGuid():N}@example.com";
+        var email = $"register-login-{Guid.NewGuid():N}@example.com";
         const string password = "Password123!";
         var registerDto = new RegisterDtoFactory().WithEmail(email).WithPassword(password).Build();
         await Client.PostAsJsonAsync("/api/auth/register", registerDto);
-        var loginDto = new LoginDtoFactory().WithEmail(email).WithPassword(password).Build();
-
-        // Act
-        var response = await Client.PostAsJsonAsync("/api/auth/login", loginDto);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("locked", body, StringComparison.OrdinalIgnoreCase);
-    }
-
-    /// <summary>
-    ///     Verifies that once an administrator clears the lockout directly (simulated via UserManager), the account can
-    ///     log in.
-    /// </summary>
-    [Fact]
-    public async Task Register_ThenUnlockedByAdmin_CanLogIn()
-    {
-        // Arrange
-        var email = $"unlocked-{Guid.NewGuid():N}@example.com";
-        const string password = "Password123!";
-        var registerDto = new RegisterDtoFactory().WithEmail(email).WithPassword(password).Build();
-        await Client.PostAsJsonAsync("/api/auth/register", registerDto);
-
-        using (var scope = Factory.Services.CreateScope())
-        {
-            var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
-            var user = await userManager.FindByEmailAsync(email);
-            await userManager.SetLockoutEndDateAsync(user!, null);
-        }
-
         var loginDto = new LoginDtoFactory().WithEmail(email).WithPassword(password).Build();
 
         // Act

@@ -146,7 +146,9 @@ public class AuthServiceTests
         _signInManagerMock
             .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
             .ReturnsAsync(SignInResult.Success);
-        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser)).Returns(_defaultToken);
+        _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(new List<string>());
+        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>()))
+            .Returns(_defaultToken);
 
         // Act
         await _authService.LoginAsync(loginDto);
@@ -165,7 +167,9 @@ public class AuthServiceTests
         _signInManagerMock
             .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
             .ReturnsAsync(SignInResult.Success);
-        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser)).Returns(_defaultToken);
+        _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(new List<string>());
+        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>()))
+            .Returns(_defaultToken);
 
         // Act
         var result = await _authService.LoginAsync(loginDto);
@@ -186,13 +190,36 @@ public class AuthServiceTests
         _signInManagerMock
             .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
             .ReturnsAsync(SignInResult.Success);
-        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser)).Returns(_defaultToken);
+        _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(new List<string>());
+        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>()))
+            .Returns(_defaultToken);
 
         // Act
         await _authService.LoginAsync(loginDto);
 
         // Assert
-        _tokenProviderMock.Verify(t => t.CreateToken(_defaultUser), Times.Once);
+        _tokenProviderMock.Verify(t => t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>()), Times.Once);
+    }
+
+    /// <summary>Verifies that LoginAsync passes the user's Identity roles through to CreateToken.</summary>
+    [Fact]
+    public async Task LoginAsync_WithValidCredentials_PassesUserRolesToTokenProvider()
+    {
+        // Arrange
+        var loginDto = new LoginDtoFactory().WithEmail(_defaultEmail).WithPassword(_defaultPassword).Build();
+        var roles = new List<string> { Roles.Author, Roles.Editor };
+        _userManagerMock.Setup(u => u.FindByEmailAsync(_defaultEmail)).ReturnsAsync(_defaultUser);
+        _signInManagerMock
+            .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
+            .ReturnsAsync(SignInResult.Success);
+        _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(roles);
+        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser, roles)).Returns(_defaultToken);
+
+        // Act
+        await _authService.LoginAsync(loginDto);
+
+        // Assert
+        _tokenProviderMock.Verify(t => t.CreateToken(_defaultUser, roles), Times.Once);
     }
 
     // ---------- RegisterAsync ----------
@@ -234,32 +261,6 @@ public class AuthServiceTests
         // Assert
         Assert.True(result.Succeeded);
         Assert.Null(result.Errors);
-    }
-
-    /// <summary>Verifies that RegisterAsync locks the newly created account out indefinitely.</summary>
-    [Fact]
-    public async Task RegisterAsync_WithValidData_LocksTheAccount()
-    {
-        // Arrange
-        var registerDto = new RegisterDtoFactory().Build();
-        IdentityUser? createdUser = null;
-        _userManagerMock
-            .Setup(u => u.CreateAsync(It.IsAny<IdentityUser>(), It.IsAny<string>()))
-            .Callback<IdentityUser, string>((user, _) => createdUser = user)
-            .ReturnsAsync(IdentityResult.Success);
-        _userManagerMock
-            .Setup(u => u.SetLockoutEnabledAsync(It.IsAny<IdentityUser>(), true))
-            .ReturnsAsync(IdentityResult.Success);
-        _userManagerMock
-            .Setup(u => u.SetLockoutEndDateAsync(It.IsAny<IdentityUser>(), DateTimeOffset.MaxValue))
-            .ReturnsAsync(IdentityResult.Success);
-
-        // Act
-        await _authService.RegisterAsync(registerDto);
-
-        // Assert
-        _userManagerMock.Verify(u => u.SetLockoutEnabledAsync(createdUser!, true), Times.Once);
-        _userManagerMock.Verify(u => u.SetLockoutEndDateAsync(createdUser!, DateTimeOffset.MaxValue), Times.Once);
     }
 
     /// <summary>Verifies that RegisterAsync assigns the default Commentator role to the newly created account.</summary>
@@ -304,9 +305,9 @@ public class AuthServiceTests
         Assert.Contains(error.Description, result.Errors!);
     }
 
-    /// <summary>Verifies that RegisterAsync when account creation fails does not lock out a (non-existent) account.</summary>
+    /// <summary>Verifies that RegisterAsync when account creation fails does not assign a role to a (non-existent) account.</summary>
     [Fact]
-    public async Task RegisterAsync_WhenCreateFails_DoesNotAttemptToLockAccount()
+    public async Task RegisterAsync_WhenCreateFails_DoesNotAssignRole()
     {
         // Arrange
         var registerDto = new RegisterDtoFactory().Build();
@@ -319,9 +320,6 @@ public class AuthServiceTests
         await _authService.RegisterAsync(registerDto);
 
         // Assert
-        _userManagerMock.Verify(u => u.SetLockoutEnabledAsync(It.IsAny<IdentityUser>(), It.IsAny<bool>()), Times.Never);
-        _userManagerMock.Verify(
-            u => u.SetLockoutEndDateAsync(It.IsAny<IdentityUser>(), It.IsAny<DateTimeOffset?>()), Times.Never);
         _userManagerMock.Verify(
             u => u.AddToRoleAsync(It.IsAny<IdentityUser>(), It.IsAny<string>()), Times.Never);
     }

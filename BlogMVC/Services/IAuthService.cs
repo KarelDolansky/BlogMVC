@@ -20,11 +20,9 @@ public interface IAuthService
     Task<LoginResult> LoginAsync(LoginDto loginDto);
 
     /// <summary>
-    ///     Creates a new Identity account for the given email/password. Email confirmation is not required
-    ///     to sign in (see <see cref="Program" />), so the new account is instead created locked out
-    ///     indefinitely; an administrator must clear the lockout directly in the database (set
-    ///     <c>LockoutEnd</c> to null on the <c>AspNetUsers</c> row) before the account can log in.
-    ///     The account is also assigned the default <see cref="Data.Roles.Commentator" /> role.
+    ///     Creates a new Identity account for the given email/password, immediately usable via
+    ///     <see cref="LoginAsync" /> (email confirmation is not required, see <see cref="Program" />).
+    ///     The account is assigned the default <see cref="Data.Roles.Commentator" /> role.
     /// </summary>
     Task<RegisterResult> RegisterAsync(RegisterDto registerDto);
 }

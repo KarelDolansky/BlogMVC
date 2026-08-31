@@ -73,10 +73,13 @@ stateless wrappers around a shared `MongoClient`/config. `AuthService` is the ex
 ## Authorization model
 
 - Reading posts (`GET api/blog`, `GET api/blog/{id}`) is public.
-- Writing posts (`POST`, `POST bulk`, `PUT`, `DELETE`) requires a JWT bearer token.
-- Editing/deleting additionally checks `post.AuthorId` against the caller's id from the token —
-  mismatches return 403 Forbid, not 404, to distinguish "not yours" from "doesn't exist".
-- `POST api/auth/register` creates the Identity account locked out; an admin must clear `LockoutEnd`
-  before the user can log in via `POST api/auth/login`.
+- Creating posts (`POST api/blog`) requires a JWT bearer token with the Administrator, Editor or Author
+  role; bulk creation (`POST api/blog/bulk`) is narrower — Administrator/Editor only, not Author. A
+  Commentator token gets 403 Forbidden on both.
+- Editing/deleting (`PUT`, `DELETE`) requires a JWT bearer token (any role) and additionally checks
+  `post.AuthorId` against the caller's id from the token — mismatches return 403 Forbid, not 404, to
+  distinguish "not yours" from "doesn't exist".
+- `POST api/auth/register` creates the Identity account as a Commentator; it's immediately usable via
+  `POST api/auth/login` — there is no email confirmation or admin approval step.
 
 For day-to-day commands (running the app, tests, configuration) see the main [README](../README.md).

@@ -104,8 +104,12 @@ public abstract class BlogControllerTestBase : IClassFixture<WebApplicationFacto
     /// </summary>
     /// <param name="userName">Display name for the new user; also used to derive a unique email.</param>
     /// <param name="password">Password for the new account; defaults to <see cref="DefaultPassword" />.</param>
+    /// <param name="role">
+    ///     Identity role (see <see cref="Roles" />) to assign before logging in, so the issued JWT carries the
+    ///     matching Role claim; null leaves the user without any role.
+    /// </param>
     protected async Task<(HttpClient Client, string UserId)> CreateAuthenticatedClientAsync(
-        string userName = "TestUser", string password = DefaultPassword)
+        string userName = "TestUser", string password = DefaultPassword, string? role = null)
     {
         var email = $"{userName.ToLowerInvariant()}-{Guid.NewGuid():N}@example.com";
         string userId;
@@ -118,6 +122,9 @@ public abstract class BlogControllerTestBase : IClassFixture<WebApplicationFacto
             if (!result.Succeeded)
                 throw new InvalidOperationException(
                     $"Failed to create test user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+
+            if (role != null)
+                await userManager.AddToRoleAsync(user, role);
 
             userId = user.Id;
         }
