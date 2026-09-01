@@ -12,13 +12,19 @@ public static class Permissions
     /// <summary>Permissions governing blog post operations.</summary>
     public static class Posts
     {
+        /// <summary>Permission claim required to create a single post.</summary>
         public const string Create = "Posts.Create";
+
+        /// <summary>Permission claim required to create multiple posts in one request. Narrower than <see cref="Create" />.</summary>
         public const string CreateBulk = "Posts.CreateBulk";
+
+        /// <summary>Permission claim required to edit a post the caller authored.</summary>
         public const string EditOwn = "Posts.EditOwn";
 
         /// <summary>Superset of <see cref="EditOwn" /> — edit any post, regardless of author.</summary>
         public const string EditAny = "Posts.EditAny";
 
+        /// <summary>Permission claim required to delete a post the caller authored.</summary>
         public const string DeleteOwn = "Posts.DeleteOwn";
 
         /// <summary>Superset of <see cref="DeleteOwn" /> — delete any post, regardless of author.</summary>

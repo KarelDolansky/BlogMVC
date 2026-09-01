@@ -42,6 +42,12 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
         return await repository.InsertOneAsync(post);
     }
 
+    /// <summary>Sends a PUT request with the given body and an If-Match header set to the given ETag.</summary>
+    /// <param name="client">Client to send the request with.</param>
+    /// <param name="url">Request URL.</param>
+    /// <param name="editPostDto">Request body.</param>
+    /// <param name="eTag">Value to send in the If-Match header.</param>
+    /// <returns>The response from the server.</returns>
     private static async Task<HttpResponseMessage> PutWithIfMatchAsync(
         HttpClient client, string url, EditPostDto editPostDto, EntityTagHeaderValue eTag)
     {

@@ -5,6 +5,7 @@ namespace BlogMVC.Tests.Data;
 /// <summary>Unit tests for <see cref="RolePermissions" />'s role-to-permission mapping.</summary>
 public class RolePermissionsTests
 {
+    /// <summary>Verifies that Administrator gets Create, CreateBulk, and both Any edit/delete permissions.</summary>
     [Fact]
     public void GetPermissions_Administrator_GrantsCreateAndAnyEditDelete()
     {
@@ -18,6 +19,7 @@ public class RolePermissionsTests
             permissions.Order());
     }
 
+    /// <summary>Verifies that Editor gets Create, CreateBulk, and both Own edit/delete permissions.</summary>
     [Fact]
     public void GetPermissions_Editor_GrantsCreateAndOwnEditDelete()
     {
@@ -31,6 +33,7 @@ public class RolePermissionsTests
             permissions.Order());
     }
 
+    /// <summary>Verifies that Author gets Create and both Own edit/delete permissions, but not CreateBulk.</summary>
     [Fact]
     public void GetPermissions_Author_GrantsCreateAndOwnEditDeleteButNotCreateBulk()
     {
@@ -41,6 +44,7 @@ public class RolePermissionsTests
             permissions.Order());
     }
 
+    /// <summary>Verifies that Administrator's permission set excludes the Own edit/delete variants.</summary>
     [Fact]
     public void GetPermissions_Administrator_DoesNotGrantOwnVariants()
     {
@@ -50,6 +54,7 @@ public class RolePermissionsTests
         Assert.DoesNotContain(Permissions.Posts.DeleteOwn, permissions);
     }
 
+    /// <summary>Verifies that Editor's permission set excludes the Any edit/delete variants.</summary>
     [Fact]
     public void GetPermissions_Editor_DoesNotGrantAnyVariants()
     {
@@ -59,6 +64,7 @@ public class RolePermissionsTests
         Assert.DoesNotContain(Permissions.Posts.DeleteAny, permissions);
     }
 
+    /// <summary>Verifies that Commentator is granted no post permissions.</summary>
     [Fact]
     public void GetPermissions_Commentator_GrantsNothing()
     {
@@ -67,6 +73,7 @@ public class RolePermissionsTests
         Assert.Empty(permissions);
     }
 
+    /// <summary>Verifies that a role name with no mapping entry grants no permissions.</summary>
     [Fact]
     public void GetPermissions_UnknownRole_GrantsNothing()
     {
@@ -75,6 +82,7 @@ public class RolePermissionsTests
         Assert.Empty(permissions);
     }
 
+    /// <summary>Verifies that holding multiple roles returns the distinct union of their permissions.</summary>
     [Fact]
     public void GetPermissions_MultipleRoles_ReturnsDistinctUnion()
     {
@@ -88,6 +96,7 @@ public class RolePermissionsTests
             permissions.Order());
     }
 
+    /// <summary>Verifies that an empty role list grants no permissions.</summary>
     [Fact]
     public void GetPermissions_NoRoles_ReturnsEmpty()
     {

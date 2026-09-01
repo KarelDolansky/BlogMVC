@@ -29,6 +29,7 @@ public abstract class BlogControllerTestBase : IClassFixture<WebApplicationFacto
     /// <summary>Default password used for test-registered Identity accounts.</summary>
     protected const string DefaultPassword = "Password123!";
 
+    /// <summary>Case-insensitive JSON options used to deserialize responses from the test host.</summary>
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     /// <summary>Fixed reference date used in tests instead of the real current time.</summary>

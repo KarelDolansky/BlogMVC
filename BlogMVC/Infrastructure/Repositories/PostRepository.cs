@@ -28,21 +28,39 @@ public class PostRepository : IPostRepository
         _posts = database.GetCollection<Post>(settings.Value.PostsCollectionName);
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Inserts <paramref name="post" /> via the MongoDB driver's <c>InsertOneAsync</c>; the driver populates
+    ///     <see cref="Post.Id" /> with the generated ObjectId on the same instance.
+    /// </summary>
+    /// <param name="post">The post to insert.</param>
+    /// <returns>The same post instance, with its generated Id populated.</returns>
     public async Task<Post> InsertOneAsync(Post post)
     {
         await _posts.InsertOneAsync(post);
         return post;
     }
 
-    /// <inheritdoc />
+    /// <summary>Inserts all <paramref name="posts" /> in a single <c>InsertManyAsync</c> call.</summary>
+    /// <param name="posts">The posts to insert.</param>
+    /// <returns>The same post instances, each with its generated Id populated.</returns>
     public async Task<IReadOnlyList<Post>> InsertManyAsync(IReadOnlyList<Post> posts)
     {
         await _posts.InsertManyAsync(posts);
         return posts;
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Replaces the document matching both <paramref name="id" /> and <paramref name="expectedVersion" /> in one
+    ///     atomic MongoDB filter. If nothing was modified, re-checks by Id alone to distinguish a version conflict
+    ///     from the document not existing at all.
+    /// </summary>
+    /// <param name="id">Id of the post to replace.</param>
+    /// <param name="expectedVersion">Version the caller last read; the replace only applies if it still matches.</param>
+    /// <param name="post">The replacement document.</param>
+    /// <returns>
+    ///     <see cref="PostUpdateResult.Success" />, <see cref="PostUpdateResult.Conflict" /> if the version no longer
+    ///     matched, or <see cref="PostUpdateResult.NotFound" /> if no document with that Id exists.
+    /// </returns>
     public async Task<PostUpdateResult> ReplaceOneAsync(string id, long expectedVersion, Post post)
     {
         var result = await _posts.ReplaceOneAsync(p => p.Id == id && p.Version == expectedVersion, post);
@@ -52,27 +70,37 @@ public class PostRepository : IPostRepository
         return exists ? PostUpdateResult.Conflict : PostUpdateResult.NotFound;
     }
 
-    /// <inheritdoc />
+    /// <summary>Deletes the document matching <paramref name="id" /> via <c>DeleteOneAsync</c>.</summary>
+    /// <param name="id">Id of the post to delete.</param>
+    /// <returns>True if a document was deleted (<c>DeletedCount &gt; 0</c>); false if none matched.</returns>
     public async Task<bool> DeleteOneAsync(string id)
     {
         var result = await _posts.DeleteOneAsync(p => p.Id == id);
         return result.DeletedCount > 0;
     }
 
-    /// <inheritdoc />
+    /// <summary>Looks up the document matching <paramref name="id" /> via <c>Find(...).FirstOrDefaultAsync()</c>.</summary>
+    /// <param name="id">Id of the post to find.</param>
+    /// <returns>The matching post, or null if none exists.</returns>
     public async Task<Post?> FindAsync(string id)
     {
         return await _posts.Find(p => p.Id == id).FirstOrDefaultAsync();
     }
 
-    /// <inheritdoc />
+    /// <summary>Returns every document in the collection, sorted descending by <see cref="Post.PublishDate" />.</summary>
+    /// <returns>All posts, most recently published first.</returns>
     public async Task<IReadOnlyList<Post>> FindAllAsync()
     {
         // Ordered from the newest post so the latest content shows up first in the listing.
         return await _posts.Find(_ => true).SortByDescending(x => x.PublishDate).ToListAsync();
     }
 
-    /// <inheritdoc />
+    /// <summary>
+    ///     Escapes <paramref name="query" /> and matches it as a case-insensitive regex against Title or Description
+    ///     via a MongoDB <c>$or</c> filter, sorted descending by PublishDate.
+    /// </summary>
+    /// <param name="query">The text to search for.</param>
+    /// <returns>Matching posts, most recently published first.</returns>
     public async Task<IReadOnlyList<Post>> SearchAsync(string query)
     {
         var escapedQuery = Regex.Escape(query);

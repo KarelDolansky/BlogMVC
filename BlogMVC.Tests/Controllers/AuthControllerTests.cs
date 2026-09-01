@@ -16,10 +16,16 @@ namespace BlogMVC.Tests.Controllers;
 /// </summary>
 public class AuthControllerTests
 {
+    /// <summary>The controller under test, wired to the mocked <see cref="IAuthService" />.</summary>
     private readonly AuthController _authController;
+
+    /// <summary>Mocked <see cref="IAuthService" /> used to stub Login/Register outcomes.</summary>
     private readonly Mock<IAuthService> _authServiceMock;
+
+    /// <summary>Fake JWT string returned by successful login/register stubs.</summary>
     private readonly string _defaultToken = "fake-jwt-token";
 
+    /// <summary>Creates the controller under test with a fresh <see cref="IAuthService" /> mock.</summary>
     public AuthControllerTests()
     {
         _authServiceMock = new Mock<IAuthService>();

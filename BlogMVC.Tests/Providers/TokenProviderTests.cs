@@ -18,21 +18,35 @@ namespace BlogMVC.Tests.Providers;
 /// </summary>
 public class TokenProviderTests
 {
+    /// <summary>Audience value returned by the mocked configuration.</summary>
     private const string DefaultAudience = "defaultAudience";
+
+    /// <summary>Issuer value returned by the mocked configuration.</summary>
     private const string DefaultIssuer = "defaultIssuer";
+
+    /// <summary>Signing key returned by the mocked configuration.</summary>
     private const string DefaultKey = "this-is-a-sufficiently-long-test-only-signing-key-1234567890";
+
+    /// <summary>Fixed "current time" returned by the mocked <see cref="IDateTimeProvider" />.</summary>
     private static readonly DateTime DefaultDate = new(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+    /// <summary>Empty role set used by tests that don't care about roles/permissions.</summary>
     private readonly string[] _defaultRoles = [];
 
+    /// <summary>Identity user passed to <see cref="TokenProvider.CreateToken" /> in most tests.</summary>
     private readonly IdentityUser _defaultUser = new()
     {
         Id = "defaultUserId",
         UserName = "defaultUserName"
     };
 
+    /// <summary>System under test, constructed with mocked configuration and date/time provider.</summary>
     private readonly TokenProvider _tokenProvider;
 
+    /// <summary>
+    ///     Sets up <see cref="_tokenProvider" /> with mocked <see cref="IConfiguration" />/
+    ///     <see cref="IDateTimeProvider" />.
+    /// </summary>
     public TokenProviderTests()
     {
         var configurationMock = new Mock<IConfiguration>();

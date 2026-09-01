@@ -14,13 +14,25 @@ namespace BlogMVC.Tests.Services;
 /// </summary>
 public class PostServiceTests
 {
+    /// <summary>Fixed "current time" returned by the mocked <see cref="IDateTimeProvider" />.</summary>
     private static readonly DateTime DefaultDate = new(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+    /// <summary>Mocked <see cref="IDateTimeProvider" /> passed to <see cref="_postService" />.</summary>
     private readonly Mock<IDateTimeProvider> _dateTimeProviderMock;
+
+    /// <summary>Author display name used across tests.</summary>
     private readonly string _defaultAuthor = "defaultAuthor";
+
+    /// <summary>Author Id used across tests.</summary>
     private readonly string _defaultAuthorId = "defaultAuthorId";
+
+    /// <summary>Mocked <see cref="IPostRepository" /> passed to <see cref="_postService" />.</summary>
     private readonly Mock<IPostRepository> _postRepositoryMock;
+
+    /// <summary>System under test, constructed with mocked date/time provider and post repository.</summary>
     private readonly PostService _postService;
 
+    /// <summary>Builds <see cref="_postService" /> with fresh mocks for each test.</summary>
     public PostServiceTests()
     {
         _postRepositoryMock = new Mock<IPostRepository>();
