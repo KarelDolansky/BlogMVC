@@ -20,6 +20,9 @@ public class AuthControllerIntegrationTests(WebApplicationFactory<Program> facto
     : BlogControllerTestBase(factory)
 {
     /// <summary>Registers a confirmed Identity user directly, bypassing the (non-existent) registration endpoint.</summary>
+    /// <param name="email">Email/username for the new account.</param>
+    /// <param name="password">Password for the new account.</param>
+    /// <returns>The new user's Identity Id.</returns>
     private async Task<string> RegisterUserAsync(string email, string password)
     {
         using var scope = Factory.Services.CreateScope();

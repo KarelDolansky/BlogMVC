@@ -19,12 +19,25 @@ namespace BlogMVC.Tests.Controllers;
 /// </summary>
 public class BlogControllerTests
 {
+    /// <summary>The controller under test, wired to the mocked <see cref="IPostService" />.</summary>
     private readonly BlogController _blogController;
+
+    /// <summary>Default author name used for the authenticated caller and matching authored posts.</summary>
     private readonly string _defaultAuthor = "defaultAuthor";
+
+    /// <summary>Default author Id used for the authenticated caller and matching authored posts.</summary>
     private readonly string _defaultAuthorId = "defaultAuthorId";
+
+    /// <summary>Default valid MongoDB ObjectId string used as both the caller's Id and a post Id.</summary>
     private readonly string _defaultId = "507f1f77bcf86cd799439011";
+
+    /// <summary>Mocked <see cref="IPostService" /> used to stub post CRUD outcomes.</summary>
     private readonly Mock<IPostService> _postServiceMock;
 
+    /// <summary>
+    ///     Creates the controller under test with a fresh <see cref="IPostService" /> mock and an
+    ///     authenticated <see cref="ClaimsPrincipal" /> using the default Id/name claims.
+    /// </summary>
     public BlogControllerTests()
     {
         _postServiceMock = new Mock<IPostService>();
@@ -43,11 +56,14 @@ public class BlogControllerTests
         };
     }
 
+    /// <summary>Sets the request's If-Match header to the given version, quoted as an ETag.</summary>
+    /// <param name="version">The version value to send back as the If-Match ETag.</param>
     private void SetIfMatchHeader(long version)
     {
         _blogController.HttpContext.Request.Headers.IfMatch = $"\"{version}\"";
     }
 
+    /// <summary>Replaces the current user with an empty <see cref="ClaimsIdentity" /> carrying no claims.</summary>
     private void SetEmptyUser()
     {
         _blogController.ControllerContext = new ControllerContext
@@ -75,6 +91,7 @@ public class BlogControllerTests
         Assert.Equal(expected.ModifiedDate, actual.ModifiedDate);
     }
 
+    /// <summary>Replaces the current user with only the Id claim set, omitting the name claim.</summary>
     private void SetUserWithoutName()
     {
         _blogController.ControllerContext = new ControllerContext

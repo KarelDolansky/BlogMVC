@@ -13,11 +13,13 @@ namespace BlogMVC.Controllers;
 ///     <see cref="Permissions.Posts" /> (see <see cref="RolePermissions" />). Edit/delete also check
 ///     resource ownership unless the caller holds the "Any" variant.
 /// </summary>
+/// <param name="postService">Business logic for reading and writing posts.</param>
 [Route("api/[controller]")]
 [ApiController]
 public class BlogController(IPostService postService) : BaseApiController
 {
     /// <summary>GET api/blog – returns all posts as a JSON array. Public, no authentication required.</summary>
+    /// <returns>200 with the full list of posts.</returns>
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<PostResponse>>> GetPosts()
     {
@@ -26,6 +28,8 @@ public class BlogController(IPostService postService) : BaseApiController
     }
 
     /// <summary>GET api/blog/{id} – returns a single post by Id. Public. Named route used by <see cref="CreatePost" />.</summary>
+    /// <param name="id">MongoDB ObjectId of the post.</param>
+    /// <returns>200 with the post (ETag header set to its version); 400 if <paramref name="id"/> isn't a valid ObjectId; 404 if not found.</returns>
     [HttpGet("{id}", Name = "GetPost")]
     public async Task<ActionResult<PostResponse>> GetPost(string id)
     {
@@ -37,6 +41,8 @@ public class BlogController(IPostService postService) : BaseApiController
     }
 
     /// <summary>POST api/blog – creates a post; requires <see cref="Permissions.Posts.Create" />.</summary>
+    /// <param name="createPostDto">Title/content of the new post.</param>
+    /// <returns>201 with the created post (Location header via the "GetPost" route); 401 if the caller's identity claims are missing.</returns>
     [HttpPost]
     [Authorize(Policy = Permissions.Posts.Create)]
     public async Task<ActionResult<PostResponse>> CreatePost(CreatePostDto createPostDto)
@@ -55,6 +61,8 @@ public class BlogController(IPostService postService) : BaseApiController
     ///     POST api/blog/bulk – creates multiple posts; requires <see cref="Permissions.Posts.CreateBulk" />
     ///     (narrower than <see cref="Permissions.Posts.Create" /> — Author lacks it).
     /// </summary>
+    /// <param name="createPostDtoes">Titles/contents of the posts to create.</param>
+    /// <returns>201 with the created posts; 401 if the caller's identity claims are missing.</returns>
     [HttpPost("bulk")]
     [Authorize(Policy = Permissions.Posts.CreateBulk)]
     public async Task<ActionResult<IReadOnlyList<PostResponse>>> BulkCreatePosts(List<CreatePostDto> createPostDtoes)
@@ -72,6 +80,13 @@ public class BlogController(IPostService postService) : BaseApiController
     ///     PUT api/blog/{id} – updates a post. Requires <see cref="Permissions.Posts.EditOwn" /> plus ownership,
     ///     or <see cref="Permissions.Posts.EditAny" /> for any post.
     /// </summary>
+    /// <param name="id">MongoDB ObjectId of the post to edit.</param>
+    /// <param name="editPostDto">New title/content for the post.</param>
+    /// <returns>
+    ///     204 on success; 400 if <paramref name="id"/> is invalid or the If-Match header is missing/malformed;
+    ///     403 if the caller doesn't own the post and lacks <see cref="Permissions.Posts.EditAny" />; 404 if not found;
+    ///     412 if the post's version no longer matches the If-Match header.
+    /// </returns>
     [HttpPut("{id}")]
     [Authorize(Policy = Permissions.Posts.EditPolicy)]
     public async Task<ActionResult> EditPost(string id, EditPostDto editPostDto)
@@ -104,6 +119,11 @@ public class BlogController(IPostService postService) : BaseApiController
     ///     DELETE api/blog/{id} – deletes a post. Requires <see cref="Permissions.Posts.DeleteOwn" /> plus
     ///     ownership, or <see cref="Permissions.Posts.DeleteAny" /> for any post.
     /// </summary>
+    /// <param name="id">MongoDB ObjectId of the post to delete.</param>
+    /// <returns>
+    ///     204 on success; 400 if <paramref name="id"/> is invalid; 403 if the caller doesn't own the post and
+    ///     lacks <see cref="Permissions.Posts.DeleteAny" />; 404 if not found.
+    /// </returns>
     [HttpDelete("{id}")]
     [Authorize(Policy = Permissions.Posts.DeletePolicy)]
     public async Task<ActionResult> DeletePost(string id)

@@ -18,11 +18,19 @@ namespace BlogMVC.Tests.Services;
 /// </summary>
 public class AuthServiceTests
 {
+    /// <summary>System under test, constructed with mocked Identity managers and token provider.</summary>
     private readonly AuthService _authService;
+
+    /// <summary>Email used across tests for the default user.</summary>
     private readonly string _defaultEmail = "test@example.com";
+
+    /// <summary>Password used across tests for the default user.</summary>
     private readonly string _defaultPassword = "Password123!";
+
+    /// <summary>Token value the mocked <see cref="ITokenProvider" /> returns for a successful login.</summary>
     private readonly string _defaultToken = "fake-jwt-token";
 
+    /// <summary>Identity user returned by the mocked <see cref="UserManager{TUser}" /> in most tests.</summary>
     private readonly IdentityUser _defaultUser = new()
     {
         Id = "defaultUserId",
@@ -30,10 +38,16 @@ public class AuthServiceTests
         UserName = "test@example.com"
     };
 
+    /// <summary>Mocked <see cref="SignInManager{TUser}" /> passed to <see cref="_authService" />.</summary>
     private readonly Mock<SignInManager<IdentityUser>> _signInManagerMock;
+
+    /// <summary>Mocked <see cref="ITokenProvider" /> passed to <see cref="_authService" />.</summary>
     private readonly Mock<ITokenProvider> _tokenProviderMock;
+
+    /// <summary>Mocked <see cref="UserManager{TUser}" /> passed to <see cref="_authService" />.</summary>
     private readonly Mock<UserManager<IdentityUser>> _userManagerMock;
 
+    /// <summary>Builds <see cref="_authService" /> with fresh mocks for each test.</summary>
     public AuthServiceTests()
     {
         _userManagerMock = CreateUserManagerMock();
@@ -47,6 +61,7 @@ public class AuthServiceTests
     }
 
     /// <summary>Builds a mocked <see cref="UserManager{TUser}" /> (it has no parameterless constructor).</summary>
+    /// <returns>A mock with a mocked <see cref="IUserStore{TUser}" /> and null dependencies otherwise.</returns>
     private static Mock<UserManager<IdentityUser>> CreateUserManagerMock()
     {
         var store = new Mock<IUserStore<IdentityUser>>();
@@ -55,6 +70,8 @@ public class AuthServiceTests
     }
 
     /// <summary>Builds a mocked <see cref="SignInManager{TUser}" /> (it has no parameterless constructor).</summary>
+    /// <param name="userManager"><see cref="UserManager{TUser}" /> to construct the sign-in manager with.</param>
+    /// <returns>A mock with mocked context accessor/claims factory and null dependencies otherwise.</returns>
     private static Mock<SignInManager<IdentityUser>> CreateSignInManagerMock(UserManager<IdentityUser> userManager)
     {
         var contextAccessor = new Mock<IHttpContextAccessor>();

@@ -6,6 +6,7 @@ namespace BlogMVC.Data;
 /// </summary>
 public static class RolePermissions
 {
+    /// <summary>Role name to the set of permission claim values that role grants.</summary>
     private static readonly IReadOnlyDictionary<string, IReadOnlySet<string>> Map =
         new Dictionary<string, IReadOnlySet<string>>
         {
@@ -27,6 +28,8 @@ public static class RolePermissions
         };
 
     /// <summary>Returns the distinct union of permissions granted by the given roles.</summary>
+    /// <param name="roles">Role names held by the user (e.g. from Identity role claims).</param>
+    /// <returns>Distinct permission claim values granted by any of <paramref name="roles"/>.</returns>
     public static IReadOnlyCollection<string> GetPermissions(IEnumerable<string> roles)
     {
         return roles.SelectMany(role => Map.GetValueOrDefault(role, new HashSet<string>()))
