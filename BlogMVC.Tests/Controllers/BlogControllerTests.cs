@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using BlogMVC.Controllers;
+using BlogMVC.Data;
 using BlogMVC.Dto;
 using BlogMVC.Models;
 using BlogMVC.Responses;
@@ -13,10 +14,8 @@ using Moq;
 namespace BlogMVC.Tests.Controllers;
 
 /// <summary>
-///     Unit tests for <see cref="BlogController" /> using a mocked <see cref="IPostService" />.
-///     Verify the return type of each action (Ok/BadRequest/NotFound/Unauthorized/Forbid/CreatedAtRoute/NoContent)
-///     depending on Id validity, whether the logged-in user is the author, and the service's result.
-///     Tests are grouped by action (GetPosts, GetPost, CreatePost, BulkCreatePosts, EditPost, DeletePost).
+///     Unit tests for <see cref="BlogController" /> with a mocked <see cref="IPostService" /> — verifies
+///     each action's returned status by Id validity, ownership/claims, and the service's result.
 /// </summary>
 public class BlogControllerTests
 {
@@ -89,6 +88,24 @@ public class BlogControllerTests
         };
     }
 
+    /// <summary>Sets the current user's Id/Name to the defaults plus an extra claim (e.g. a permission claim).</summary>
+    /// <param name="claimType">The claim type to add (e.g. <see cref="Permissions.ClaimType" />).</param>
+    /// <param name="claimValue">The claim value to add (e.g. <see cref="Permissions.Posts.EditAny" />).</param>
+    private void SetUserWithClaim(string claimType, string claimValue)
+    {
+        _blogController.ControllerContext = new ControllerContext
+        {
+            HttpContext = new DefaultHttpContext
+            {
+                User = new ClaimsPrincipal(new ClaimsIdentity([
+                    new Claim(ClaimTypes.NameIdentifier, _defaultId),
+                    new Claim(ClaimTypes.Name, _defaultAuthor),
+                    new Claim(claimType, claimValue)
+                ], "test"))
+            }
+        };
+    }
+
     // ---------- GetPosts ----------
 
     /// <summary>Verifies that GetPosts returns Ok with all posts from the service.</summary>
@@ -96,7 +113,7 @@ public class BlogControllerTests
     public async Task GetPosts_ReturnsOkWithAllPosts()
     {
         // Arrange
-        var posts = new List<Post> { new PostFactory().Build() };
+        var posts = new List<Post> { new PostFactory().WithId(_defaultId).Build() };
         _postServiceMock.Setup(p => p.GetPostsAsync()).ReturnsAsync(posts);
 
         // Act
@@ -146,7 +163,7 @@ public class BlogControllerTests
     {
         // Arrange
         var id = _defaultId;
-        var post = new PostFactory().Build();
+        var post = new PostFactory().WithId(_defaultId).Build();
         _postServiceMock.Setup(p => p.GetPostAsync(_defaultId)).ReturnsAsync(post);
 
         // Act
@@ -342,6 +359,50 @@ public class BlogControllerTests
         Assert.IsType<ForbidResult>(response);
     }
 
+    /// <summary>
+    ///     Verifies that EditPost when the caller isn't the author but holds the Posts.EditAny claim
+    ///     bypasses the ownership check and proceeds to the service call.
+    /// </summary>
+    [Fact]
+    public async Task EditPost_NotAuthorWithEditAnyClaim_BypassesOwnershipCheck()
+    {
+        // Arrange
+        var id = _defaultId;
+        var editPostDto = new EditPostDtoFactory().Build();
+        var post = new PostFactory().WithAuthorId("different-author-id").Build();
+        _postServiceMock.Setup(p => p.GetPostAsync(_defaultId)).ReturnsAsync(post);
+        _postServiceMock.Setup(p => p.EditPostAsync(id, editPostDto, 0)).ReturnsAsync(PostUpdateResult.Success);
+        SetUserWithClaim(Permissions.ClaimType, Permissions.Posts.EditAny);
+        SetIfMatchHeader(0);
+
+        // Act
+        var response = await _blogController.EditPost(id, editPostDto);
+
+        // Assert
+        Assert.IsType<NoContentResult>(response);
+    }
+
+    /// <summary>
+    ///     Verifies that EditPost when the caller isn't the author and only holds Posts.EditOwn (not
+    ///     Posts.EditAny) still returns Forbid — the claim value, not just its type, is what's checked.
+    /// </summary>
+    [Fact]
+    public async Task EditPost_NotAuthorWithEditOwnClaim_ReturnsForbid()
+    {
+        // Arrange
+        var id = _defaultId;
+        var editPostDto = new EditPostDtoFactory().Build();
+        var post = new PostFactory().WithAuthorId("different-author-id").Build();
+        _postServiceMock.Setup(p => p.GetPostAsync(_defaultId)).ReturnsAsync(post);
+        SetUserWithClaim(Permissions.ClaimType, Permissions.Posts.EditOwn);
+
+        // Act
+        var response = await _blogController.EditPost(id, editPostDto);
+
+        // Assert
+        Assert.IsType<ForbidResult>(response);
+    }
+
     /// <summary>Verifies that EditPost without an If-Match header returns BadRequest.</summary>
     [Fact]
     public async Task EditPost_WithoutIfMatchHeader_ReturnsBadRequest()
@@ -472,6 +533,47 @@ public class BlogControllerTests
         var id = _defaultId;
         var post = new PostFactory().WithAuthorId("different-author-id").Build();
         _postServiceMock.Setup(p => p.GetPostAsync(_defaultId)).ReturnsAsync(post);
+
+        // Act
+        var response = await _blogController.DeletePost(id);
+
+        // Assert
+        Assert.IsType<ForbidResult>(response);
+    }
+
+    /// <summary>
+    ///     Verifies that DeletePost when the caller isn't the author but holds the Posts.DeleteAny claim
+    ///     bypasses the ownership check and proceeds to the service call.
+    /// </summary>
+    [Fact]
+    public async Task DeletePost_NotAuthorWithDeleteAnyClaim_BypassesOwnershipCheck()
+    {
+        // Arrange
+        var id = _defaultId;
+        var post = new PostFactory().WithAuthorId("different-author-id").Build();
+        _postServiceMock.Setup(p => p.GetPostAsync(_defaultId)).ReturnsAsync(post);
+        _postServiceMock.Setup(p => p.DeletePostAsync(_defaultId)).ReturnsAsync(true);
+        SetUserWithClaim(Permissions.ClaimType, Permissions.Posts.DeleteAny);
+
+        // Act
+        var response = await _blogController.DeletePost(id);
+
+        // Assert
+        Assert.IsType<NoContentResult>(response);
+    }
+
+    /// <summary>
+    ///     Verifies that DeletePost when the caller isn't the author and only holds Posts.DeleteOwn (not
+    ///     Posts.DeleteAny) still returns Forbid — the claim value, not just its type, is what's checked.
+    /// </summary>
+    [Fact]
+    public async Task DeletePost_NotAuthorWithDeleteOwnClaim_ReturnsForbid()
+    {
+        // Arrange
+        var id = _defaultId;
+        var post = new PostFactory().WithAuthorId("different-author-id").Build();
+        _postServiceMock.Setup(p => p.GetPostAsync(_defaultId)).ReturnsAsync(post);
+        SetUserWithClaim(Permissions.ClaimType, Permissions.Posts.DeleteOwn);
 
         // Act
         var response = await _blogController.DeletePost(id);
