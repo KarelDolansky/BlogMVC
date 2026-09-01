@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Claims;
+using System.Text.Json;
 using BlogMVC.Data;
 using BlogMVC.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
@@ -11,9 +12,8 @@ using Microsoft.Extensions.DependencyInjection;
 namespace BlogMVC.Tests.IntegrationTests;
 
 /// <summary>
-///     Integration tests for <see cref="AuthController" /> against the real app (via an HTTP client
-///     from <see cref="WebApplicationFactory{Program}" />), real ASP.NET Core Identity (in-memory
-///     SQLite) and the real JWT signing configuration from appsettings.Testing.json.
+///     Integration tests for <see cref="AuthController" /> against the real app — real in-memory SQLite
+///     Identity and real JWT signing from appsettings.Testing.json.
 /// </summary>
 [Collection("BlogController")]
 public class AuthControllerIntegrationTests(WebApplicationFactory<Program> factory)
@@ -81,6 +81,34 @@ public class AuthControllerIntegrationTests(WebApplicationFactory<Program> facto
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>Verifies that Login with a malformed email address returns 400 Bad Request (DTO validation, not 401).</summary>
+    [Fact]
+    public async Task Login_WithInvalidEmailFormat_ReturnsBadRequest()
+    {
+        // Arrange
+        var loginDto = new LoginDtoFactory().WithEmail("not-an-email").Build();
+
+        // Act
+        var response = await Client.PostAsJsonAsync("/api/auth/login", loginDto);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>Verifies that Login with an empty password returns 400 Bad Request (DTO validation, not 401).</summary>
+    [Fact]
+    public async Task Login_WithEmptyPassword_ReturnsBadRequest()
+    {
+        // Arrange
+        var loginDto = new LoginDtoFactory().WithPassword("").Build();
+
+        // Act
+        var response = await Client.PostAsJsonAsync("/api/auth/login", loginDto);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     /// <summary>Verifies that Login with a wrong password returns 401 Unauthorized.</summary>
@@ -187,5 +215,63 @@ public class AuthControllerIntegrationTests(WebApplicationFactory<Program> facto
 
         // Assert
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>Verifies that Register with a malformed email address returns 400 Bad Request (DTO validation).</summary>
+    [Fact]
+    public async Task Register_WithInvalidEmailFormat_ReturnsBadRequest()
+    {
+        // Arrange
+        var registerDto = new RegisterDtoFactory().WithEmail("not-an-email").Build();
+
+        // Act
+        var response = await Client.PostAsJsonAsync("/api/auth/register", registerDto);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>
+    ///     Verifies Register with an empty password returns 400 via DTO validation, not Identity's password
+    ///     policy — distinguished by response shape ("errors" object keyed by field, not an array).
+    /// </summary>
+    [Fact]
+    public async Task Register_WithEmptyPassword_ReturnsBadRequest()
+    {
+        // Arrange
+        var email = $"empty-pw-{Guid.NewGuid():N}@example.com";
+        var registerDto = new RegisterDtoFactory().WithEmail(email).WithPassword("").Build();
+
+        // Act
+        var response = await Client.PostAsJsonAsync("/api/auth/register", registerDto);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<JsonElement>();
+        var errors = body.GetProperty("errors");
+        Assert.Equal(JsonValueKind.Object, errors.ValueKind);
+        Assert.True(errors.TryGetProperty("Password", out _),
+            "Expected the automatic ValidationProblemDetails shape (errors.Password), not AuthController's custom ErrorResponse.");
+    }
+
+    /// <summary>
+    ///     Verifies Register with a non-empty but policy-violating password (too short/simple) is rejected
+    ///     by UserManager.CreateAsync — 400, distinct from the DTO-validation path.
+    /// </summary>
+    [Fact]
+    public async Task Register_WithWeakPassword_ReturnsBadRequest()
+    {
+        // Arrange
+        var email = $"weak-pw-{Guid.NewGuid():N}@example.com";
+        var registerDto = new RegisterDtoFactory().WithEmail(email).WithPassword("weak").Build();
+
+        // Act
+        var response = await Client.PostAsJsonAsync("/api/auth/register", registerDto);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        using var scope = Factory.Services.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
+        Assert.Null(await userManager.FindByEmailAsync(email));
     }
 }
