@@ -252,7 +252,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
     public async Task EditPost_WithInvalidId_ReturnsBadRequest()
     {
         // Arrange
-        var (client, _) = await CreateAuthenticatedClientAsync("editor");
+        var (client, _) = await CreateAuthenticatedClientAsync("editor", role: Roles.Author);
 
         // Act
         var response = await client.PutAsJsonAsync("/api/blog/not-an-object-id", new EditPostDtoFactory().Build());
@@ -277,7 +277,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
     public async Task EditPost_NotFound_ReturnsNotFound()
     {
         // Arrange
-        var (client, _) = await CreateAuthenticatedClientAsync("editor");
+        var (client, _) = await CreateAuthenticatedClientAsync("editor", role: Roles.Author);
 
         // Act
         var response = await client.PutAsJsonAsync($"/api/blog/{DefaultId}", new EditPostDtoFactory().Build());
@@ -286,13 +286,28 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    /// <summary>Verifies that EditPost as a Commentator (no edit permission) returns 403 Forbidden.</summary>
+    [Fact]
+    public async Task EditPost_AsCommentator_ReturnsForbidden()
+    {
+        // Arrange
+        var post = await SeedPostAsync("some-author-id");
+        var (client, _) = await CreateAuthenticatedClientAsync("commentator", role: Roles.Commentator);
+
+        // Act
+        var response = await client.PutAsJsonAsync($"/api/blog/{post.Id}", new EditPostDtoFactory().Build());
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     /// <summary>Verifies that EditPost by a user who isn't the post's author returns 403 Forbidden.</summary>
     [Fact]
     public async Task EditPost_AsNonAuthor_ReturnsForbidden()
     {
         // Arrange
         var post = await SeedPostAsync("the-real-author-id");
-        var (client, _) = await CreateAuthenticatedClientAsync("impostor");
+        var (client, _) = await CreateAuthenticatedClientAsync("impostor", role: Roles.Author);
 
         // Act
         var response = await client.PutAsJsonAsync($"/api/blog/{post.Id}", new EditPostDtoFactory().Build());
@@ -306,7 +321,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
     public async Task EditPost_AsAuthor_UpdatesPost()
     {
         // Arrange
-        var (client, userId) = await CreateAuthenticatedClientAsync("author");
+        var (client, userId) = await CreateAuthenticatedClientAsync("author", role: Roles.Author);
         var post = await SeedPostAsync(userId);
         var editPostDto = new EditPostDtoFactory().WithTitle("Updated Title").Build();
         var eTag = (await Client.GetAsync($"/api/blog/{post.Id}")).Headers.ETag;
@@ -321,12 +336,35 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal("Updated Title", updated!.Title);
     }
 
+    /// <summary>
+    ///     Verifies that EditPost by an Administrator succeeds even for a post the Administrator doesn't own
+    ///     (Posts.EditAny bypasses the ownership check that gates Author/Editor).
+    /// </summary>
+    [Fact]
+    public async Task EditPost_AsAdministrator_UpdatesAnyPost()
+    {
+        // Arrange
+        var post = await SeedPostAsync("the-real-author-id");
+        var (client, _) = await CreateAuthenticatedClientAsync("admin", role: Roles.Administrator);
+        var editPostDto = new EditPostDtoFactory().WithTitle("Updated By Admin").Build();
+        var eTag = (await Client.GetAsync($"/api/blog/{post.Id}")).Headers.ETag;
+
+        // Act
+        var response = await PutWithIfMatchAsync(client, $"/api/blog/{post.Id}", editPostDto, eTag!);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var getResponse = await Client.GetAsync($"/api/blog/{post.Id}");
+        var updated = await getResponse.Content.ReadFromJsonAsync<PostResponse>();
+        Assert.Equal("Updated By Admin", updated!.Title);
+    }
+
     /// <summary>Verifies that EditPost without an If-Match header returns 400 Bad Request.</summary>
     [Fact]
     public async Task EditPost_WithoutIfMatchHeader_ReturnsBadRequest()
     {
         // Arrange
-        var (client, userId) = await CreateAuthenticatedClientAsync("author");
+        var (client, userId) = await CreateAuthenticatedClientAsync("author", role: Roles.Author);
         var post = await SeedPostAsync(userId);
 
         // Act
@@ -341,7 +379,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
     public async Task EditPost_WithStaleIfMatch_ReturnsPreconditionFailed()
     {
         // Arrange
-        var (client, userId) = await CreateAuthenticatedClientAsync("author");
+        var (client, userId) = await CreateAuthenticatedClientAsync("author", role: Roles.Author);
         var post = await SeedPostAsync(userId);
         var staleETag = (await Client.GetAsync($"/api/blog/{post.Id}")).Headers.ETag;
 
@@ -363,7 +401,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
     public async Task DeletePost_WithInvalidId_ReturnsBadRequest()
     {
         // Arrange
-        var (client, _) = await CreateAuthenticatedClientAsync("deleter");
+        var (client, _) = await CreateAuthenticatedClientAsync("deleter", role: Roles.Author);
 
         // Act
         var response = await client.DeleteAsync("/api/blog/not-an-object-id");
@@ -388,7 +426,7 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
     public async Task DeletePost_NotFound_ReturnsNotFound()
     {
         // Arrange
-        var (client, _) = await CreateAuthenticatedClientAsync("deleter");
+        var (client, _) = await CreateAuthenticatedClientAsync("deleter", role: Roles.Author);
 
         // Act
         var response = await client.DeleteAsync($"/api/blog/{DefaultId}");
@@ -397,13 +435,13 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    /// <summary>Verifies that DeletePost by a user who isn't the post's author returns 403 Forbidden.</summary>
+    /// <summary>Verifies that DeletePost as a Commentator (no delete permission) returns 403 Forbidden.</summary>
     [Fact]
-    public async Task DeletePost_AsNonAuthor_ReturnsForbidden()
+    public async Task DeletePost_AsCommentator_ReturnsForbidden()
     {
         // Arrange
-        var post = await SeedPostAsync("the-real-author-id");
-        var (client, _) = await CreateAuthenticatedClientAsync("impostor");
+        var post = await SeedPostAsync("some-author-id");
+        var (client, _) = await CreateAuthenticatedClientAsync("commentator", role: Roles.Commentator);
 
         // Act
         var response = await client.DeleteAsync($"/api/blog/{post.Id}");
@@ -412,12 +450,47 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    /// <summary>Verifies that DeletePost by a user who isn't the post's author returns 403 Forbidden.</summary>
+    [Fact]
+    public async Task DeletePost_AsNonAuthor_ReturnsForbidden()
+    {
+        // Arrange
+        var post = await SeedPostAsync("the-real-author-id");
+        var (client, _) = await CreateAuthenticatedClientAsync("impostor", role: Roles.Author);
+
+        // Act
+        var response = await client.DeleteAsync($"/api/blog/{post.Id}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>
+    ///     Verifies that DeletePost by an Administrator succeeds even for a post the Administrator doesn't own
+    ///     (Posts.DeleteAny bypasses the ownership check that gates Author/Editor).
+    /// </summary>
+    [Fact]
+    public async Task DeletePost_AsAdministrator_RemovesAnyPost()
+    {
+        // Arrange
+        var post = await SeedPostAsync("the-real-author-id");
+        var (client, _) = await CreateAuthenticatedClientAsync("admin", role: Roles.Administrator);
+
+        // Act
+        var response = await client.DeleteAsync($"/api/blog/{post.Id}");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        var getResponse = await Client.GetAsync($"/api/blog/{post.Id}");
+        Assert.Equal(HttpStatusCode.NotFound, getResponse.StatusCode);
+    }
+
     /// <summary>Verifies that DeletePost by the post's author succeeds and actually removes the post.</summary>
     [Fact]
     public async Task DeletePost_AsAuthor_RemovesPost()
     {
         // Arrange
-        var (client, userId) = await CreateAuthenticatedClientAsync("author");
+        var (client, userId) = await CreateAuthenticatedClientAsync("author", role: Roles.Author);
         var post = await SeedPostAsync(userId);
 
         // Act
