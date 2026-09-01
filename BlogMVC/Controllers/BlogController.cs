@@ -3,16 +3,15 @@ using BlogMVC.Dto;
 using BlogMVC.Responses;
 using BlogMVC.Results;
 using BlogMVC.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace BlogMVC.Controllers;
 
 /// <summary>
-///     Blog posts API at "api/blog". Reading is public; creating requires a JWT with an
-///     Administrator/Editor/Author role (bulk creation additionally excludes Author); editing/deleting requires
-///     a JWT and ownership.
+///     Blog posts API at "api/blog". Reading is public; writes require the matching claim from
+///     <see cref="Permissions.Posts" /> (see <see cref="RolePermissions" />). Edit/delete also check
+///     resource ownership unless the caller holds the "Any" variant.
 /// </summary>
 [Route("api/[controller]")]
 [ApiController]
@@ -37,13 +36,9 @@ public class BlogController(IPostService postService) : BaseApiController
         return Ok(PostResponse.FromPost(post));
     }
 
-    /// <summary>
-    ///     POST api/blog – creates a post; requires the Administrator, Editor or Author role, author taken from
-    ///     the token's claims.
-    /// </summary>
+    /// <summary>POST api/blog – creates a post; requires <see cref="Permissions.Posts.Create" />.</summary>
     [HttpPost]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme,
-        Roles = $"{Roles.Administrator},{Roles.Editor},{Roles.Author}")]
+    [Authorize(Policy = Permissions.Posts.Create)]
     public async Task<ActionResult<PostResponse>> CreatePost(CreatePostDto createPostDto)
     {
         var userId = GetUserId();
@@ -57,12 +52,11 @@ public class BlogController(IPostService postService) : BaseApiController
     }
 
     /// <summary>
-    ///     POST api/blog/bulk – creates multiple posts authored by the caller; requires the Administrator or
-    ///     Editor role — narrower than <see cref="CreatePost" />, which also allows Author.
+    ///     POST api/blog/bulk – creates multiple posts; requires <see cref="Permissions.Posts.CreateBulk" />
+    ///     (narrower than <see cref="Permissions.Posts.Create" /> — Author lacks it).
     /// </summary>
     [HttpPost("bulk")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme,
-        Roles = $"{Roles.Administrator},{Roles.Editor}")]
+    [Authorize(Policy = Permissions.Posts.CreateBulk)]
     public async Task<ActionResult<IReadOnlyList<PostResponse>>> BulkCreatePosts(List<CreatePostDto> createPostDtoes)
     {
         var userId = GetUserId();
@@ -74,9 +68,12 @@ public class BlogController(IPostService postService) : BaseApiController
         return StatusCode(StatusCodes.Status201Created, created.Select(PostResponse.FromPost).ToList());
     }
 
-    /// <summary>PUT api/blog/{id} – updates a post. Requires JWT + ownership (403 otherwise), 400/404 for invalid/missing Id.</summary>
+    /// <summary>
+    ///     PUT api/blog/{id} – updates a post. Requires <see cref="Permissions.Posts.EditOwn" /> plus ownership,
+    ///     or <see cref="Permissions.Posts.EditAny" /> for any post.
+    /// </summary>
     [HttpPut("{id}")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [Authorize(Policy = Permissions.Posts.EditPolicy)]
     public async Task<ActionResult> EditPost(string id, EditPostDto editPostDto)
     {
         if (!IsValidObjectId(id)) return BadRequest("Invalid post ID.");
@@ -86,7 +83,8 @@ public class BlogController(IPostService postService) : BaseApiController
 
         var post = await postService.GetPostAsync(id);
         if (post == null) return NotFound();
-        if (post.AuthorId != userId) return Forbid();
+        if (post.AuthorId != userId && !User.HasClaim(Permissions.ClaimType, Permissions.Posts.EditAny))
+            return Forbid();
 
         if (!TryGetIfMatchVersion(out var expectedVersion))
             return BadRequest("If-Match header with the post's current ETag is required.");
@@ -103,11 +101,11 @@ public class BlogController(IPostService postService) : BaseApiController
     }
 
     /// <summary>
-    ///     DELETE api/blog/{id} – deletes a post. Requires JWT + ownership (403 otherwise), 400/404 for invalid/missing
-    ///     Id.
+    ///     DELETE api/blog/{id} – deletes a post. Requires <see cref="Permissions.Posts.DeleteOwn" /> plus
+    ///     ownership, or <see cref="Permissions.Posts.DeleteAny" /> for any post.
     /// </summary>
     [HttpDelete("{id}")]
-    [Authorize(AuthenticationSchemes = JwtBearerDefaults.AuthenticationScheme)]
+    [Authorize(Policy = Permissions.Posts.DeletePolicy)]
     public async Task<ActionResult> DeletePost(string id)
     {
         if (!IsValidObjectId(id)) return BadRequest("Invalid post ID.");
@@ -117,7 +115,8 @@ public class BlogController(IPostService postService) : BaseApiController
 
         var post = await postService.GetPostAsync(id);
         if (post == null) return NotFound();
-        if (post.AuthorId != userId) return Forbid();
+        if (post.AuthorId != userId && !User.HasClaim(Permissions.ClaimType, Permissions.Posts.DeleteAny))
+            return Forbid();
 
         if (!await postService.DeletePostAsync(id)) return NotFound("Post not found.");
         return NoContent();

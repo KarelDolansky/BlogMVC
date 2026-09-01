@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using BlogMVC.Data;
 using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Infrastructure.Providers;
 using Microsoft.AspNetCore.Identity;
@@ -107,6 +108,33 @@ public class TokenProviderTests
 
         // Assert
         Assert.DoesNotContain(jwt.Claims, c => c.Type == ClaimTypes.Role);
+    }
+
+    /// <summary>Verifies that CreateToken adds one permission claim per permission the roles grant (see RolePermissions).</summary>
+    [Fact]
+    public void CreateToken_IncludesPermissionClaim_ForEachPermissionGrantedByRoles()
+    {
+        // Act
+        var token = _tokenProvider.CreateToken(_defaultUser, [Roles.Author]);
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        // Assert
+        var permissionClaims = jwt.Claims.Where(c => c.Type == Permissions.ClaimType).Select(c => c.Value);
+        Assert.Equal(
+            [Permissions.Posts.Create, Permissions.Posts.DeleteOwn, Permissions.Posts.EditOwn],
+            permissionClaims.Order());
+    }
+
+    /// <summary>Verifies that CreateToken with roles granting no permissions (e.g. Commentator) adds no permission claims.</summary>
+    [Fact]
+    public void CreateToken_WithRoleGrantingNoPermissions_AddsNoPermissionClaims()
+    {
+        // Act
+        var token = _tokenProvider.CreateToken(_defaultUser, [Roles.Commentator]);
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        // Assert
+        Assert.DoesNotContain(jwt.Claims, c => c.Type == Permissions.ClaimType);
     }
 
     /// <summary>Verifies that CreateToken sets the issuer and audience from configuration.</summary>

@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using BlogMVC.Data;
 using BlogMVC.Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -17,12 +18,14 @@ public class TokenProvider(IConfiguration configuration, IDateTimeProvider dateT
     /// <inheritdoc />
     public string CreateToken(IdentityUser user, IEnumerable<string> roles)
     {
+        var roleList = roles.ToList();
         var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id),
             new Claim(ClaimTypes.Name, user.UserName!)
         };
-        claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
+        claims.AddRange(roleList.Select(r => new Claim(ClaimTypes.Role, r)));
+        claims.AddRange(RolePermissions.GetPermissions(roleList).Select(p => new Claim(Permissions.ClaimType, p)));
 
         var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);

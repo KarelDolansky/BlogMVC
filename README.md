@@ -5,7 +5,9 @@ A blog REST API built with ASP.NET Core and MongoDB.
 ## Features
 - REST API for post management (`api/blog`) and JWT auth (`api/auth/register`, `api/auth/login`)
 - ASP.NET Core Identity (SQLite) for user accounts, exchanged for JWTs via `api/auth/login`
-- Role-based post creation (Administrator/Editor/Author; bulk creation excludes Author, Commentator can't create)
+- Permission-based post authorization (roles grant permissions — Administrator/Editor/Author can create,
+  bulk creation excludes Author; editing/deleting requires ownership, except Administrator, who can manage
+  any post; Commentator can't create/edit/delete)
 - Optimistic concurrency on post edits via ETag/If-Match, so concurrent edits don't silently overwrite each other
 - Unit and integration tests
 
@@ -33,8 +35,10 @@ secrets, ...) — these values are intentionally not committed in `appsettings.j
 3. Send that token as `Authorization: Bearer {token}` on the write endpoints of `api/blog`. Reading
    posts (GET) does not require a token. Creating a post (POST) requires the Administrator, Editor or
    Author role; bulk creation (POST bulk) requires Administrator or Editor — a Commentator token gets
-   403 Forbidden on both. Editing/deleting (PUT, DELETE) accepts any role.
-4. Editing or deleting a post additionally requires the token's user to be that post's author.
+   403 Forbidden on both. Editing/deleting (PUT, DELETE) requires the same Administrator/Editor/Author
+   roles as creating (a Commentator token gets 403 Forbidden there too).
+4. Editing or deleting a post requires the token's user to be that post's author — except an
+   Administrator, who can edit or delete any post.
 
 ## Architecture
 

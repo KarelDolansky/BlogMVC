@@ -72,13 +72,24 @@ stateless wrappers around a shared `MongoClient`/config. `AuthService` is the ex
 
 ## Authorization model
 
+Authorization checks a **permission claim**, not a role name. `Data/Roles.cs` names the Identity roles;
+`Data/Permissions.cs` names the permissions (`Posts.Create`, `Posts.CreateBulk`, `Posts.EditOwn`,
+`Posts.EditAny`, `Posts.DeleteOwn`, `Posts.DeleteAny`); `Data/RolePermissions.cs` is the static map from role
+to the permissions it grants. `TokenProvider` expands a user's roles into that permission set at login and
+embeds one `permission` claim per entry in the JWT, alongside the `Role` claims. `Program.cs` registers one
+named authorization policy per endpoint (`RequireClaim("permission", ...)` + the JWT bearer scheme), and
+`BlogController` endpoints use `[Authorize(Policy = ...)]` instead of listing role names — so a user holding
+multiple roles gets the union of what they grant, and a policy never needs to know which roles exist.
+
 - Reading posts (`GET api/blog`, `GET api/blog/{id}`) is public.
-- Creating posts (`POST api/blog`) requires a JWT bearer token with the Administrator, Editor or Author
-  role; bulk creation (`POST api/blog/bulk`) is narrower — Administrator/Editor only, not Author. A
-  Commentator token gets 403 Forbidden on both.
-- Editing/deleting (`PUT`, `DELETE`) requires a JWT bearer token (any role) and additionally checks
-  `post.AuthorId` against the caller's id from the token — mismatches return 403 Forbid, not 404, to
-  distinguish "not yours" from "doesn't exist".
+- Creating posts (`POST api/blog`) requires `Posts.Create` (granted to Administrator/Editor/Author); bulk
+  creation (`POST api/blog/bulk`) requires `Posts.CreateBulk` — narrower, Administrator/Editor only, not
+  Author. A Commentator token (which grants no `Posts.*` permission) gets 403 Forbidden on both.
+- Editing/deleting (`PUT`, `DELETE`) is gated by an Own/Any pair: `Posts.EditOwn`/`Posts.DeleteOwn` (granted
+  to Administrator/Editor/Author) additionally require `post.AuthorId` to match the caller's id from the
+  token, restricting them to the caller's own posts — mismatches return 403 Forbid, not 404, to distinguish
+  "not yours" from "doesn't exist". `Posts.EditAny`/`Posts.DeleteAny` (Administrator only) skip that ownership
+  check, so an Administrator can edit/delete any post.
 - `POST api/auth/register` creates the Identity account as a Commentator; it's immediately usable via
   `POST api/auth/login` — there is no email confirmation or admin approval step.
 

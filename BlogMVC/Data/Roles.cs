@@ -1,29 +1,19 @@
 namespace BlogMVC.Data;
 
 /// <summary>
-///     Predefined Identity role names. Roles are seeded into the <c>AspNetRoles</c> table at startup
-///     (see <see cref="Program" />). Post creation is gated by role via <c>[Authorize(Roles = ...)]</c> on
-///     <see cref="Controllers.BlogController" /> (<see cref="Administrator" />/<see cref="Editor" />/
-///     <see cref="Author" /> can create posts, <see cref="Editor" />/<see cref="Administrator" /> can also
-///     bulk-create; <see cref="Commentator" /> cannot); further per-role authorization checks may be added
-///     later. Newly registered accounts are assigned <see cref="Commentator" /> by default (see
-///     <see cref="Services.AuthService.RegisterAsync" />).
+///     Predefined Identity role names, seeded into <c>AspNetRoles</c> at startup (see <see cref="Program" />).
+///     Each role grants a set of <see cref="Permissions" /> via <see cref="RolePermissions" />; endpoints
+///     check the permission, not the role name, so a user holding multiple roles gets their union.
 /// </summary>
 public static class Roles
 {
-    /// <summary>Full administrative access; can create posts individually or in bulk (scope beyond that to be defined later).</summary>
+    /// <summary>Grants post creation (single/bulk) and edit/delete of any post, not just its own.</summary>
     public const string Administrator = "Administrator";
 
-    /// <summary>
-    ///     Can create posts individually or in bulk, unlike <see cref="Author" /> (scope beyond post creation to be
-    ///     defined later).
-    /// </summary>
+    /// <summary>Grants post creation (single/bulk) and edit/delete of its own posts.</summary>
     public const string Editor = "Editor";
 
-    /// <summary>
-    ///     Can create posts individually, but not in bulk (see <see cref="Controllers.BlogController.BulkCreatePosts" />
-    ///     ).
-    /// </summary>
+    /// <summary>Grants single (not bulk) post creation and edit/delete of its own posts.</summary>
     public const string Author = "Author";
 
     /// <summary>Default role for newly registered accounts; cannot create posts.</summary>
