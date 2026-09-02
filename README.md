@@ -8,6 +8,7 @@ A blog REST API built with ASP.NET Core and MongoDB.
 - Permission-based post authorization (roles grant permissions — Administrator/Editor/Author can create,
   bulk creation excludes Author; editing/deleting requires ownership, except Administrator, who can manage
   any post; Commentator can't create/edit/delete)
+- User role administration (`api/users/{id}/role`), restricted to Administrator
 - Optimistic concurrency on post edits via ETag/If-Match, so concurrent edits don't silently overwrite each other
 - Unit and integration tests
 
@@ -39,6 +40,9 @@ secrets, ...) — these values are intentionally not committed in `appsettings.j
    roles as creating (a Commentator token gets 403 Forbidden there too).
 4. Editing or deleting a post requires the token's user to be that post's author — except an
    Administrator, who can edit or delete any post.
+5. `PUT api/users/{id}/role` with `{ "role": "..." }` replaces a user's role; only an Administrator
+   token can call it (403 Forbidden otherwise). Returns 404 if the user id doesn't exist, 400 if the
+   role name isn't recognized.
 
 ## Architecture
 

@@ -34,12 +34,21 @@ public static class Permissions
         public const string EditPolicy = "Posts.Edit";
 
         /// <summary>
-        ///     Policy name for the delete endpoint — satisfied by either <see cref="DeleteOwn" /> or <see cref="DeleteAny" />
-        ///     .
+        ///     Policy name for the delete endpoint — satisfied by either <see cref="DeleteOwn" /> or <see cref="DeleteAny" />.
         /// </summary>
         public const string DeletePolicy = "Posts.Delete";
 
         /// <summary>All post-related permission claim values (policy names excluded).</summary>
         public static readonly IReadOnlyList<string> All = [Create, CreateBulk, EditOwn, EditAny, DeleteOwn, DeleteAny];
+    }
+
+    /// <summary>Permissions governing user account administration.</summary>
+    public static class Users
+    {
+        /// <summary>Permission claim required to change another user's role.</summary>
+        public const string ManageRoles = "Users.ManageRoles";
+
+        /// <summary>All user-related permission claim values (policy names excluded).</summary>
+        public static readonly IReadOnlyList<string> All = [ManageRoles];
     }
 }

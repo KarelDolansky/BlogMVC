@@ -13,7 +13,8 @@ public static class RolePermissions
             [Roles.Administrator] = new HashSet<string>
             {
                 Permissions.Posts.Create, Permissions.Posts.CreateBulk,
-                Permissions.Posts.EditAny, Permissions.Posts.DeleteAny
+                Permissions.Posts.EditAny, Permissions.Posts.DeleteAny,
+                Permissions.Users.ManageRoles
             },
             [Roles.Editor] = new HashSet<string>
             {
