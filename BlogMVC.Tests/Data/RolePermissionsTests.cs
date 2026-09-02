@@ -5,16 +5,19 @@ namespace BlogMVC.Tests.Data;
 /// <summary>Unit tests for <see cref="RolePermissions" />'s role-to-permission mapping.</summary>
 public class RolePermissionsTests
 {
-    /// <summary>Verifies that Administrator gets Create, CreateBulk, and both Any edit/delete permissions.</summary>
+    /// <summary>
+    ///     Verifies that Administrator gets Create, CreateBulk, both Any edit/delete permissions, and
+    ///     Users.ManageRoles.
+    /// </summary>
     [Fact]
-    public void GetPermissions_Administrator_GrantsCreateAndAnyEditDelete()
+    public void GetPermissions_Administrator_GrantsCreateAndAnyEditDeleteAndManageRoles()
     {
         var permissions = RolePermissions.GetPermissions([Roles.Administrator]);
 
         Assert.Equal(
             [
                 Permissions.Posts.Create, Permissions.Posts.CreateBulk, Permissions.Posts.DeleteAny,
-                Permissions.Posts.EditAny
+                Permissions.Posts.EditAny, Permissions.Users.ManageRoles
             ],
             permissions.Order());
     }
@@ -91,7 +94,8 @@ public class RolePermissionsTests
         Assert.Equal(
             [
                 Permissions.Posts.Create, Permissions.Posts.CreateBulk, Permissions.Posts.DeleteAny,
-                Permissions.Posts.DeleteOwn, Permissions.Posts.EditAny, Permissions.Posts.EditOwn
+                Permissions.Posts.DeleteOwn, Permissions.Posts.EditAny, Permissions.Posts.EditOwn,
+                Permissions.Users.ManageRoles
             ],
             permissions.Order());
     }
