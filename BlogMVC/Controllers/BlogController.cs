@@ -141,4 +141,17 @@ public class BlogController(IPostService postService) : BaseApiController
         if (!await postService.DeletePostAsync(id)) return NotFound("Post not found.");
         return NoContent();
     }
+
+    /// <summary>GET api/blog/search?query= – searches posts by title/description. Public, no authentication required.</summary>
+    /// <param name="query">Text to search for in the post title or description.</param>
+    /// <returns>200 with matching posts, most recently published first; 400 if <paramref name="query" /> is null/empty.</returns>
+    [HttpGet("search")]
+    public async Task<ActionResult<IReadOnlyList<PostResponse>>> SearchPosts([FromQuery] string query)
+    {
+        if (string.IsNullOrEmpty(query))
+            return BadRequest("Search query must not be empty.");
+
+        var posts = await postService.SearchAsync(query);
+        return Ok(posts.Select(PostResponse.FromPost).ToList());
+    }
 }

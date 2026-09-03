@@ -87,7 +87,9 @@ JWT bearer scheme), and controllers use `[Authorize(Policy = ...)]` instead of l
 user holding multiple roles gets the union of what they grant, and a policy never needs to know which roles
 exist.
 
-- Reading posts (`GET api/blog`, `GET api/blog/{id}`) is public.
+- Reading posts (`GET api/blog`, `GET api/blog/{id}`, `GET api/blog/search?query=`) is public. Search matches
+  a case-insensitive substring against Title or Description (`PostRepository.SearchAsync`, Mongo `$or` regex
+  filter); the controller rejects an empty/missing `query` with 400 before it reaches the repository.
 - Creating posts (`POST api/blog`) requires `Posts.Create` (granted to Administrator/Editor/Author); bulk
   creation (`POST api/blog/bulk`) requires `Posts.CreateBulk` — narrower, Administrator/Editor only, not
   Author. A Commentator token (which grants no `Posts.*` permission) gets 403 Forbidden on both.

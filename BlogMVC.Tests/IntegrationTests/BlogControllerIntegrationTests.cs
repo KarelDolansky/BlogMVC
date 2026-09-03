@@ -157,6 +157,66 @@ public class BlogControllerIntegrationTests(WebApplicationFactory<Program> facto
         Assert.NotNull(response.Headers.ETag);
     }
 
+    // ---------- SearchPosts ----------
+
+    /// <summary>Verifies that SearchPosts with an empty query returns 400 Bad Request.</summary>
+    [Fact]
+    public async Task SearchPosts_WithEmptyQuery_ReturnsBadRequest()
+    {
+        // Act
+        var response = await Client.GetAsync("/api/blog/search?query=");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    /// <summary>Verifies that SearchPosts returns posts whose title matches the query, without requiring authentication.</summary>
+    [Fact]
+    public async Task SearchPosts_WithMatchingTitle_ReturnsMatchingPost()
+    {
+        // Arrange
+        var post = await SeedPostAsync("some-author-id"); // PostFactory default Title = "Title"
+
+        // Act
+        var response = await Client.GetAsync("/api/blog/search?query=Titl");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var posts = await response.Content.ReadFromJsonAsync<List<PostResponse>>();
+        Assert.Equal([post.Id], posts!.Select(p => p.Id));
+    }
+
+    /// <summary>Verifies that SearchPosts with no matches returns an empty array.</summary>
+    [Fact]
+    public async Task SearchPosts_WithNoMatches_ReturnsEmptyArray()
+    {
+        // Arrange
+        await SeedPostAsync("some-author-id");
+
+        // Act
+        var response = await Client.GetAsync("/api/blog/search?query=nonexistent-term-xyz");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var posts = await response.Content.ReadFromJsonAsync<List<PostResponse>>();
+        Assert.Empty(posts!);
+    }
+
+    /// <summary>
+    ///     Verifies that "/api/blog/search" resolves to SearchPosts rather than GetPost's "{id}" route — ASP.NET Core
+    ///     attribute routing prefers the literal "search" segment over the parameterized one regardless of declaration
+    ///     order, so this must not 400 with GetPost's "Invalid post ID" response.
+    /// </summary>
+    [Fact]
+    public async Task SearchPosts_Route_TakesPrecedenceOverGetPostIdRoute()
+    {
+        // Act
+        var response = await Client.GetAsync("/api/blog/search?query=x");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+    }
+
     // ---------- CORS ----------
 
     /// <summary>
