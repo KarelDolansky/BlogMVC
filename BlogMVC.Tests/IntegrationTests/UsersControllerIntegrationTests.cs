@@ -247,4 +247,61 @@ public class UsersControllerIntegrationTests(WebApplicationFactory<Program> fact
         // Assert
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
+
+    // ---------- GetRoles ----------
+
+    /// <summary>Verifies that GetRoles as an Administrator returns 200 OK with every predefined role.</summary>
+    [Fact]
+    public async Task GetRoles_AsAdministrator_ReturnsOkWithAllRoles()
+    {
+        // Arrange
+        var (adminClient, _) = await CreateAuthenticatedClientAsync("admin", role: Roles.Administrator);
+
+        // Act
+        var response = await adminClient.GetAsync("/api/users/roles");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<RolesResponse>();
+        Assert.Equal(Roles.All, body!.Roles);
+    }
+
+    /// <summary>Verifies that GetRoles without a bearer token returns 401 Unauthorized.</summary>
+    [Fact]
+    public async Task GetRoles_WithoutAuthentication_ReturnsUnauthorized()
+    {
+        // Act
+        var response = await Client.GetAsync("/api/users/roles");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>Verifies that GetRoles as an Editor (no Users.ManageRoles permission) returns 403 Forbidden.</summary>
+    [Fact]
+    public async Task GetRoles_AsEditor_ReturnsForbidden()
+    {
+        // Arrange
+        var (editorClient, _) = await CreateAuthenticatedClientAsync("editor", role: Roles.Editor);
+
+        // Act
+        var response = await editorClient.GetAsync("/api/users/roles");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>Verifies that GetRoles as a Commentator (default role) returns 403 Forbidden.</summary>
+    [Fact]
+    public async Task GetRoles_AsCommentator_ReturnsForbidden()
+    {
+        // Arrange
+        var (commentatorClient, _) = await CreateAuthenticatedClientAsync("commentator", role: Roles.Commentator);
+
+        // Act
+        var response = await commentatorClient.GetAsync("/api/users/roles");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
 }

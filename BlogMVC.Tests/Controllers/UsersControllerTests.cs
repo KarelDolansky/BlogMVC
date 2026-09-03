@@ -142,4 +142,19 @@ public class UsersControllerTests
         var body = Assert.IsType<List<UserSummaryResponse>>(result.Value);
         Assert.Empty(body);
     }
+
+    // ---------- GetRoles ----------
+
+    /// <summary>Verifies that GetRoles returns Ok with every predefined role.</summary>
+    [Fact]
+    public void GetRoles_ReturnsOkWithAllRoles()
+    {
+        // Act
+        var response = _usersController.GetRoles();
+
+        // Assert
+        var result = Assert.IsType<OkObjectResult>(response.Result);
+        var body = Assert.IsType<RolesResponse>(result.Value);
+        Assert.Equal(Roles.All, body.Roles);
+    }
 }
