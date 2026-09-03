@@ -1,4 +1,5 @@
 using BlogMVC.Data;
+using BlogMVC.Models;
 using BlogMVC.Results;
 using Microsoft.AspNetCore.Identity;
 
@@ -36,5 +37,25 @@ public class UserService(UserManager<IdentityUser> userManager) : IUserService
         await userManager.AddToRoleAsync(user, role);
 
         return UpdateUserRoleResult.Success();
+    }
+
+    /// <summary>
+    ///     Loads every user (<c>UserManager.Users</c> — Identity exposes no async equivalent) and, for each, its
+    ///     current role via <c>GetRolesAsync</c> (Identity has no single "role" column — roles are a separate
+    ///     join table).
+    /// </summary>
+    /// <returns>Every user as a <see cref="UserSummary" />, first-assigned role only (there should be at most one).</returns>
+    public async Task<IReadOnlyList<UserSummary>> GetUsersAsync()
+    {
+        var users = userManager.Users.ToList();
+        var summaries = new List<UserSummary>(users.Count);
+
+        foreach (var user in users)
+        {
+            var roles = await userManager.GetRolesAsync(user);
+            summaries.Add(new UserSummary { Id = user.Id, UserName = user.UserName!, Role = roles.FirstOrDefault() });
+        }
+
+        return summaries;
     }
 }

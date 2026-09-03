@@ -102,5 +102,9 @@ exist.
   Administrator only. It replaces the target's entire role set with the single requested role (no
   Own/Any distinction — there's no "ownership" concept for another user's role). 404 if the user id
   doesn't exist, 400 if the requested role name isn't one of `Data.Roles.All`.
+- Listing users (`GET api/users`) requires the same `Users.ManageRoles` permission and returns every user's
+  id, username, and current role (`UserService.GetUsersAsync`, via `UserManager.Users` + `GetRolesAsync` per
+  user) — meant to feed the same role-management frontend as the PUT above, not a general-purpose user
+  directory.
 
 For day-to-day commands (running the app, tests, configuration) see the main [README](../README.md).
