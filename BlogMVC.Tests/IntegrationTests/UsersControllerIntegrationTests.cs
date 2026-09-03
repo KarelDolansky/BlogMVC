@@ -188,4 +188,63 @@ public class UsersControllerIntegrationTests(WebApplicationFactory<Program> fact
         Assert.True(errors.TryGetProperty("Role", out _),
             "Expected the automatic ValidationProblemDetails shape (errors.Role), not UsersController's plain BadRequest string.");
     }
+
+    // ---------- GetUsers ----------
+
+    /// <summary>Verifies that GetUsers as an Administrator returns 200 OK with every created user and their role.</summary>
+    [Fact]
+    public async Task GetUsers_AsAdministrator_ReturnsOkWithAllUsersAndRoles()
+    {
+        // Arrange
+        var (adminClient, adminId) = await CreateAuthenticatedClientAsync("admin", role: Roles.Administrator);
+        var (_, targetUserId) = await CreateAuthenticatedClientAsync("target", role: Roles.Author);
+
+        // Act
+        var response = await adminClient.GetAsync("/api/users");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var body = await response.Content.ReadFromJsonAsync<List<UserSummaryResponse>>() ?? [];
+        Assert.Contains(body, u => u.Id == adminId && u.Role == Roles.Administrator);
+        Assert.Contains(body, u => u.Id == targetUserId && u.Role == Roles.Author);
+    }
+
+    /// <summary>Verifies that GetUsers without a bearer token returns 401 Unauthorized.</summary>
+    [Fact]
+    public async Task GetUsers_WithoutAuthentication_ReturnsUnauthorized()
+    {
+        // Act
+        var response = await Client.GetAsync("/api/users");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    /// <summary>Verifies that GetUsers as an Editor (no Users.ManageRoles permission) returns 403 Forbidden.</summary>
+    [Fact]
+    public async Task GetUsers_AsEditor_ReturnsForbidden()
+    {
+        // Arrange
+        var (editorClient, _) = await CreateAuthenticatedClientAsync("editor", role: Roles.Editor);
+
+        // Act
+        var response = await editorClient.GetAsync("/api/users");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    /// <summary>Verifies that GetUsers as a Commentator (default role) returns 403 Forbidden.</summary>
+    [Fact]
+    public async Task GetUsers_AsCommentator_ReturnsForbidden()
+    {
+        // Arrange
+        var (commentatorClient, _) = await CreateAuthenticatedClientAsync("commentator", role: Roles.Commentator);
+
+        // Act
+        var response = await commentatorClient.GetAsync("/api/users");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
 }

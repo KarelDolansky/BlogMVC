@@ -159,4 +159,58 @@ public class UserServiceTests
         // Assert
         _userManagerMock.Verify(u => u.AddToRoleAsync(_defaultUser, Roles.Administrator), Times.Once);
     }
+
+    // ---------- GetUsersAsync ----------
+
+    /// <summary>Verifies that GetUsersAsync maps every user to a summary carrying their first assigned role.</summary>
+    [Fact]
+    public async Task GetUsersAsync_WithUsers_ReturnsSummariesWithRoles()
+    {
+        // Arrange
+        var otherUser = new IdentityUser
+            { Id = "otherUserId", Email = "other@example.com", UserName = "other@example.com" };
+        _userManagerMock.Setup(u => u.Users).Returns(new[] { _defaultUser, otherUser }.AsQueryable());
+        _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(new List<string> { Roles.Editor });
+        _userManagerMock.Setup(u => u.GetRolesAsync(otherUser)).ReturnsAsync(new List<string> { Roles.Author });
+
+        // Act
+        var result = await _userService.GetUsersAsync();
+
+        // Assert
+        Assert.Equal(2, result.Count);
+        Assert.Contains(result,
+            u => u.Id == _defaultUser.Id && u.UserName == _defaultUser.UserName && u.Role == Roles.Editor);
+        Assert.Contains(result,
+            u => u.Id == otherUser.Id && u.UserName == otherUser.UserName && u.Role == Roles.Author);
+    }
+
+    /// <summary>Verifies that GetUsersAsync maps a user with no assigned role to a null Role.</summary>
+    [Fact]
+    public async Task GetUsersAsync_UserWithNoRole_ReturnsNullRole()
+    {
+        // Arrange
+        _userManagerMock.Setup(u => u.Users).Returns(new[] { _defaultUser }.AsQueryable());
+        _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(new List<string>());
+
+        // Act
+        var result = await _userService.GetUsersAsync();
+
+        // Assert
+        Assert.Single(result);
+        Assert.Null(result[0].Role);
+    }
+
+    /// <summary>Verifies that GetUsersAsync with no users returns an empty list.</summary>
+    [Fact]
+    public async Task GetUsersAsync_NoUsers_ReturnsEmptyList()
+    {
+        // Arrange
+        _userManagerMock.Setup(u => u.Users).Returns(Array.Empty<IdentityUser>().AsQueryable());
+
+        // Act
+        var result = await _userService.GetUsersAsync();
+
+        // Assert
+        Assert.Empty(result);
+    }
 }

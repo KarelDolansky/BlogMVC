@@ -1,5 +1,6 @@
 using BlogMVC.Controllers;
 using BlogMVC.Data;
+using BlogMVC.Models;
 using BlogMVC.Responses;
 using BlogMVC.Results;
 using BlogMVC.Services;
@@ -99,5 +100,46 @@ public class UsersControllerTests
 
         // Assert
         _userServiceMock.Verify(u => u.UpdateUserRoleAsync(_defaultUserId, Roles.Administrator), Times.Once);
+    }
+
+    // ---------- GetUsers ----------
+
+    /// <summary>Verifies that GetUsers returns Ok with every user mapped to a UserSummaryResponse.</summary>
+    [Fact]
+    public async Task GetUsers_WithUsers_ReturnsOkWithMappedUsers()
+    {
+        // Arrange
+        var users = new List<UserSummary>
+        {
+            new() { Id = "user1", UserName = "user1@example.com", Role = Roles.Editor },
+            new() { Id = "user2", UserName = "user2@example.com", Role = null }
+        };
+        _userServiceMock.Setup(u => u.GetUsersAsync()).ReturnsAsync(users);
+
+        // Act
+        var response = await _usersController.GetUsers();
+
+        // Assert
+        var result = Assert.IsType<OkObjectResult>(response.Result);
+        var body = Assert.IsType<List<UserSummaryResponse>>(result.Value);
+        Assert.Equal(2, body.Count);
+        Assert.Contains(body, u => u.Id == "user1" && u.UserName == "user1@example.com" && u.Role == Roles.Editor);
+        Assert.Contains(body, u => u.Id == "user2" && u.UserName == "user2@example.com" && u.Role == null);
+    }
+
+    /// <summary>Verifies that GetUsers with no users returns Ok with an empty list.</summary>
+    [Fact]
+    public async Task GetUsers_WithNoUsers_ReturnsOkWithEmptyList()
+    {
+        // Arrange
+        _userServiceMock.Setup(u => u.GetUsersAsync()).ReturnsAsync(new List<UserSummary>());
+
+        // Act
+        var response = await _usersController.GetUsers();
+
+        // Assert
+        var result = Assert.IsType<OkObjectResult>(response.Result);
+        var body = Assert.IsType<List<UserSummaryResponse>>(result.Value);
+        Assert.Empty(body);
     }
 }

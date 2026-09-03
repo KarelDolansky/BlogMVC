@@ -1,3 +1,4 @@
+using BlogMVC.Models;
 using BlogMVC.Results;
 
 namespace BlogMVC.Services;
@@ -16,4 +17,8 @@ public interface IUserService
     /// <param name="role">The role to assign. Must be one of <see cref="Data.Roles.All" />.</param>
     /// <returns>An <see cref="UpdateUserRoleResult" /> indicating success, or why it failed.</returns>
     Task<UpdateUserRoleResult> UpdateUserRoleAsync(string userId, string role);
+
+    /// <summary>Lists every Identity user together with their currently assigned role, for role-administration UIs.</summary>
+    /// <returns>All users; each <see cref="UserSummary.Role" /> is null if that user holds no role.</returns>
+    Task<IReadOnlyList<UserSummary>> GetUsersAsync();
 }
