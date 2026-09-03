@@ -106,5 +106,8 @@ exist.
   id, username, and current role (`UserService.GetUsersAsync`, via `UserManager.Users` + `GetRolesAsync` per
   user) — meant to feed the same role-management frontend as the PUT above, not a general-purpose user
   directory.
+- Listing assignable roles (`GET api/users/roles`) requires the same `Users.ManageRoles` permission and
+  returns `Data.Roles.All` unchanged — a static, non-Identity lookup meant to feed the role dropdown in the
+  same frontend, so it doesn't have to hardcode role names separately from the backend.
 
 For day-to-day commands (running the app, tests, configuration) see the main [README](../README.md).

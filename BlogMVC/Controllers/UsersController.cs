@@ -50,4 +50,16 @@ public class UsersController(IUserService userService) : BaseApiController
 
         return Ok(new UserRoleResponse { UserId = id, Role = dto.Role });
     }
+
+    /// <summary>
+    ///     GET api/users/roles – lists every role a user can be assigned. Requires
+    ///     <see cref="Permissions.Users.ManageRoles" />; feeds the role dropdown in a frontend role-management UI.
+    /// </summary>
+    /// <returns>200 with all predefined roles.</returns>
+    [HttpGet("roles")]
+    [Authorize(Policy = Permissions.Users.ManageRoles)]
+    public ActionResult<RolesResponse> GetRoles()
+    {
+        return Ok(new RolesResponse { Roles = Roles.All });
+    }
 }
