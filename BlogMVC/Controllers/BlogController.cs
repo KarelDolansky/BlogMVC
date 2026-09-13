@@ -10,8 +10,8 @@ namespace BlogMVC.Controllers;
 
 /// <summary>
 ///     Blog posts API at "api/blog". Reading is public; writes require the matching claim from
-///     <see cref="Permissions.Posts" /> (see <see cref="RolePermissions" />). Edit/delete also check
-///     resource ownership unless the caller holds the "Any" variant.
+///     <see cref="Permissions.Posts" />, granted per-role via <see cref="Services.IRoleService" />. Edit/delete
+///     also check resource ownership unless the caller holds the "Any" variant.
 /// </summary>
 /// <param name="postService">Business logic for reading and writing posts.</param>
 [Route("api/[controller]")]

@@ -38,6 +38,12 @@ public class AuthServiceTests
         UserName = "test@example.com"
     };
 
+    /// <summary>
+    ///     Mocked <see cref="RoleManager{TRole}" /> passed to <see cref="_authService" />; unconfigured, so
+    ///     role→permission lookups resolve to no permissions unless a test sets one up.
+    /// </summary>
+    private readonly Mock<RoleManager<IdentityRole>> _roleManagerMock;
+
     /// <summary>Mocked <see cref="SignInManager{TUser}" /> passed to <see cref="_authService" />.</summary>
     private readonly Mock<SignInManager<IdentityUser>> _signInManagerMock;
 
@@ -52,11 +58,13 @@ public class AuthServiceTests
     {
         _userManagerMock = CreateUserManagerMock();
         _signInManagerMock = CreateSignInManagerMock(_userManagerMock.Object);
+        _roleManagerMock = CreateRoleManagerMock();
         _tokenProviderMock = new Mock<ITokenProvider>();
 
         _authService = new AuthService(
             _userManagerMock.Object,
             _signInManagerMock.Object,
+            _roleManagerMock.Object,
             _tokenProviderMock.Object);
     }
 
@@ -67,6 +75,14 @@ public class AuthServiceTests
         var store = new Mock<IUserStore<IdentityUser>>();
         return new Mock<UserManager<IdentityUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!,
             null!);
+    }
+
+    /// <summary>Builds a mocked <see cref="RoleManager{TRole}" /> (it has no parameterless constructor).</summary>
+    /// <returns>A mock with a mocked <see cref="IRoleStore{TRole}" /> and null dependencies otherwise.</returns>
+    private static Mock<RoleManager<IdentityRole>> CreateRoleManagerMock()
+    {
+        var store = new Mock<IRoleStore<IdentityRole>>();
+        return new Mock<RoleManager<IdentityRole>>(store.Object, null!, null!, null!, null!);
     }
 
     /// <summary>Builds a mocked <see cref="SignInManager{TUser}" /> (it has no parameterless constructor).</summary>
@@ -164,7 +180,8 @@ public class AuthServiceTests
             .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
             .ReturnsAsync(SignInResult.Success);
         _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(new List<string>());
-        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>()))
+        _tokenProviderMock.Setup(t =>
+                t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>()))
             .Returns(_defaultToken);
 
         // Act
@@ -185,7 +202,8 @@ public class AuthServiceTests
             .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
             .ReturnsAsync(SignInResult.Success);
         _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(new List<string>());
-        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>()))
+        _tokenProviderMock.Setup(t =>
+                t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>()))
             .Returns(_defaultToken);
 
         // Act
@@ -208,14 +226,17 @@ public class AuthServiceTests
             .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
             .ReturnsAsync(SignInResult.Success);
         _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(new List<string>());
-        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>()))
+        _tokenProviderMock.Setup(t =>
+                t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>()))
             .Returns(_defaultToken);
 
         // Act
         await _authService.LoginAsync(loginDto);
 
         // Assert
-        _tokenProviderMock.Verify(t => t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>()), Times.Once);
+        _tokenProviderMock.Verify(
+            t => t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>()),
+            Times.Once);
     }
 
     /// <summary>Verifies that LoginAsync passes the user's Identity roles through to CreateToken.</summary>
@@ -230,13 +251,14 @@ public class AuthServiceTests
             .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
             .ReturnsAsync(SignInResult.Success);
         _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(roles);
-        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser, roles)).Returns(_defaultToken);
+        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser, roles, It.IsAny<IEnumerable<string>>()))
+            .Returns(_defaultToken);
 
         // Act
         await _authService.LoginAsync(loginDto);
 
         // Assert
-        _tokenProviderMock.Verify(t => t.CreateToken(_defaultUser, roles), Times.Once);
+        _tokenProviderMock.Verify(t => t.CreateToken(_defaultUser, roles, It.IsAny<IEnumerable<string>>()), Times.Once);
     }
 
     // ---------- RegisterAsync ----------

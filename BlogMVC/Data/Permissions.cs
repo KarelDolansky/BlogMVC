@@ -1,13 +1,19 @@
 namespace BlogMVC.Data;
 
 /// <summary>
-///     Permission claim values granted per role by <see cref="RolePermissions" />, checked via policies in
-///     <c>Program.cs</c>.
+///     Permission claim values, checked via policies in <c>Program.cs</c>. Which roles grant which of these is
+///     runtime-editable via <see cref="Services.IRoleService" />, stored as Identity role claims.
 /// </summary>
 public static class Permissions
 {
     /// <summary>Claim type used for permission claims in issued JWTs.</summary>
     public const string ClaimType = "permission";
+
+    /// <summary>
+    ///     Every known permission claim value across all categories. A role can only be granted values from this
+    ///     set (see <see cref="Services.IRoleService" />) — an arbitrary string would have no policy behind it.
+    /// </summary>
+    public static readonly IReadOnlyList<string> All = [.. Posts.All, .. Users.All, .. Roles.All];
 
     /// <summary>Permissions governing blog post operations.</summary>
     public static class Posts
@@ -50,5 +56,15 @@ public static class Permissions
 
         /// <summary>All user-related permission claim values (policy names excluded).</summary>
         public static readonly IReadOnlyList<string> All = [ManageRoles];
+    }
+
+    /// <summary>Permissions governing role administration (creating roles, editing their granted permissions).</summary>
+    public static class Roles
+    {
+        /// <summary>Permission claim required to create, delete, or edit the permissions of a role.</summary>
+        public const string Manage = "Roles.Manage";
+
+        /// <summary>All role-related permission claim values.</summary>
+        public static readonly IReadOnlyList<string> All = [Manage];
     }
 }

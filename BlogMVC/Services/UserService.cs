@@ -7,12 +7,14 @@ namespace BlogMVC.Services;
 
 /// <summary>Default <see cref="IUserService" />: manages Identity role assignments via <see cref="UserManager{TUser}" />.</summary>
 /// <param name="userManager">Identity's user store, used to look up users and manage their role assignments.</param>
-public class UserService(UserManager<IdentityUser> userManager) : IUserService
+/// <param name="roleManager">Identity's role store, used to validate that a requested role actually exists.</param>
+public class UserService(UserManager<IdentityUser> userManager, RoleManager<IdentityRole> roleManager) : IUserService
 {
     /// <summary>
-    ///     Looks up the user by id, validates <paramref name="role" /> against <see cref="Roles.All" />, then
-    ///     removes every role the user currently holds (<c>GetRolesAsync</c>/<c>RemoveFromRolesAsync</c>) and
-    ///     assigns the new one (<c>AddToRoleAsync</c>).
+    ///     Looks up the user by id, validates that <paramref name="role" /> exists (any role known to Identity,
+    ///     not just the predefined <see cref="Roles.All" /> — an administrator may have created more via
+    ///     <see cref="IRoleService" />), then removes every role the user currently holds
+    ///     (<c>GetRolesAsync</c>/<c>RemoveFromRolesAsync</c>) and assigns the new one (<c>AddToRoleAsync</c>).
     /// </summary>
     /// <param name="userId">Identity id of the user to update.</param>
     /// <param name="role">The role to assign.</param>
@@ -23,7 +25,7 @@ public class UserService(UserManager<IdentityUser> userManager) : IUserService
     /// </returns>
     public async Task<UpdateUserRoleResult> UpdateUserRoleAsync(string userId, string role)
     {
-        if (!Roles.All.Contains(role))
+        if (!await roleManager.RoleExistsAsync(role))
             return UpdateUserRoleResult.Failure(UpdateUserRoleFailureReason.InvalidRole);
 
         var user = await userManager.FindByIdAsync(userId);

@@ -8,7 +8,7 @@ public enum UpdateUserRoleFailureReason
     /// <summary>No user exists with the given id.</summary>
     UserNotFound,
 
-    /// <summary>The requested role isn't one of <see cref="Data.Roles.All" />.</summary>
+    /// <summary>No role with the requested name exists (see <see cref="Services.IRoleService" />).</summary>
     InvalidRole
 }
 
