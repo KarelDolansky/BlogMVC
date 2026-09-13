@@ -24,17 +24,26 @@ public class UserServiceTests
     /// <summary>Identity id used across tests for the default user.</summary>
     private readonly string _defaultUserId = "defaultUserId";
 
+    /// <summary>
+    ///     Mocked <see cref="RoleManager{TRole}" /> passed to <see cref="_userService" />, treating every
+    ///     <see cref="Roles.All" /> entry as existing.
+    /// </summary>
+    private readonly Mock<RoleManager<IdentityRole>> _roleManagerMock;
+
     /// <summary>Mocked <see cref="UserManager{TUser}" /> passed to <see cref="_userService" />.</summary>
     private readonly Mock<UserManager<IdentityUser>> _userManagerMock;
 
-    /// <summary>System under test, constructed with a mocked Identity manager.</summary>
+    /// <summary>System under test, constructed with mocked Identity managers.</summary>
     private readonly UserService _userService;
 
-    /// <summary>Builds <see cref="_userService" /> with a fresh mock for each test.</summary>
+    /// <summary>Builds <see cref="_userService" /> with fresh mocks for each test.</summary>
     public UserServiceTests()
     {
         _userManagerMock = CreateUserManagerMock();
-        _userService = new UserService(_userManagerMock.Object);
+        _roleManagerMock = CreateRoleManagerMock();
+        _roleManagerMock.Setup(r => r.RoleExistsAsync(It.IsAny<string>()))
+            .ReturnsAsync((string name) => Roles.All.Contains(name));
+        _userService = new UserService(_userManagerMock.Object, _roleManagerMock.Object);
     }
 
     /// <summary>Builds a mocked <see cref="UserManager{TUser}" /> (it has no parameterless constructor).</summary>
@@ -44,6 +53,14 @@ public class UserServiceTests
         var store = new Mock<IUserStore<IdentityUser>>();
         return new Mock<UserManager<IdentityUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!,
             null!);
+    }
+
+    /// <summary>Builds a mocked <see cref="RoleManager{TRole}" /> (it has no parameterless constructor).</summary>
+    /// <returns>A mock with a mocked <see cref="IRoleStore{TRole}" /> and null dependencies otherwise.</returns>
+    private static Mock<RoleManager<IdentityRole>> CreateRoleManagerMock()
+    {
+        var store = new Mock<IRoleStore<IdentityRole>>();
+        return new Mock<RoleManager<IdentityRole>>(store.Object, null!, null!, null!, null!);
     }
 
     // ---------- UpdateUserRoleAsync ----------

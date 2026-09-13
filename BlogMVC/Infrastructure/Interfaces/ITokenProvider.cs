@@ -10,12 +10,16 @@ namespace BlogMVC.Infrastructure.Interfaces;
 public interface ITokenProvider
 {
     /// <summary>
-    ///     Builds a signed JWT for the given Identity user: Id, username, one <c>Role</c> claim per role, and
-    ///     one <see cref="Data.Permissions.ClaimType"/> claim per permission those roles grant (see
-    ///     <see cref="Data.RolePermissions"/>). Valid for 1 hour from <see cref="IDateTimeProvider"/>.Now.
+    ///     Builds a signed JWT for the given Identity user: Id, username, one <c>Role</c> claim per role, and one
+    ///     <see cref="Data.Permissions.ClaimType"/> claim per entry in <paramref name="permissions"/>. Valid for
+    ///     1 hour from <see cref="IDateTimeProvider"/>.Now.
     /// </summary>
     /// <param name="user">The authenticated Identity user the token is issued for.</param>
     /// <param name="roles">The user's assigned Identity role names (see <see cref="Data.Roles"/>).</param>
+    /// <param name="permissions">
+    ///     The permission claim values to embed, already resolved from <paramref name="roles"/> by the caller
+    ///     (see <see cref="Helpers.RoleManagerExtensions.GetPermissionsAsync"/>).
+    /// </param>
     /// <returns>The encoded JWT as a string, ready to be returned to the client.</returns>
-    string CreateToken(IdentityUser user, IEnumerable<string> roles);
+    string CreateToken(IdentityUser user, IEnumerable<string> roles, IEnumerable<string> permissions);
 }

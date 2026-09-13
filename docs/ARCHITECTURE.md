@@ -14,8 +14,10 @@ flowchart LR
     Controllers -->|auth| Identity["UserManager / SignInManager\n(ASP.NET Identity)"]
     Identity --> SQLite[(SQLite)]
     Controllers -->|issue JWT| TokenProvider["Infrastructure/Providers\n(TokenProvider)"]
-    Controllers -->|manage roles| UserService["Services (UserService)"]
+    Controllers -->|assign a role to a user| UserService["Services (UserService)"]
     UserService --> Identity
+    Controllers -->|create roles, edit permissions| RoleService["Services (RoleService)"]
+    RoleService --> Identity
 ```
 
 - **Blog posts**: `Controllers` → `Services` (business logic) → `Infrastructure/Repositories` (raw
@@ -25,6 +27,14 @@ flowchart LR
   the JWT returned to the client.
 - **User administration**: `UsersController` → `IUserService`/`UserService` → `UserManager` (ASP.NET
   Identity) — replaces a user's assigned role.
+- **Role administration**: `RolesController` → `IRoleService`/`RoleService` → `RoleManager`/`UserManager`
+  (ASP.NET Identity) — creates/deletes roles and edits which permissions a role grants, stored as Identity
+  role claims (`AspNetRoleClaims`). `RoleService` opens an explicit `ApplicationDbContext` transaction around
+  each multi-step write (create role + grant claims, remove+add claims on a permission replacement,
+  check-then-delete) so a failure partway through rolls back instead of leaving a role half-updated; role
+  names are trimmed before use so whitespace can't create a role visually indistinguishable from an existing
+  one, and a `CreateAsync` failure/race (a duplicate name slipping in between the existence check and the
+  write) is mapped to a clean `DuplicateName` result rather than an unhandled exception.
 - Controllers never return domain models (`Post`, `IdentityUser`) directly — they map to a type in
   `Responses/` so the wire shape stays decoupled from the persistence model.
 - The two stores are wired independently and never share a transaction: a post edit and a user's
@@ -35,25 +45,25 @@ flowchart LR
 ```
 BlogMVC/
 ├── Controllers/          # HTTP endpoints. BaseApiController holds shared helpers (claims, ObjectId checks, ETag).
-├── Services/              # Business logic (PostService, AuthService, UserService) sitting between controllers and infrastructure.
+├── Services/              # Business logic (PostService, AuthService, UserService, RoleService) sitting between controllers and infrastructure.
 ├── Infrastructure/
 │   ├── Interfaces/        # IPostRepository, ITokenProvider, IDateTimeProvider
 │   ├── Providers/         # TokenProvider (JWT issuing), SystemDateTimeProvider
 │   └── Repositories/      # PostRepository — the only place that talks to the MongoDB driver
 ├── Data/                  # EF Core ApplicationDbContext + Migrations (SQLite, Identity schema)
-├── Models/                # Domain model persisted to MongoDB (Post) and config (MongoDbSettings)
-├── Dto/                   # Input models for requests (CreatePostDto, EditPostDto, LoginDto, RegisterDto, UpdateUserRoleDto)
-├── Responses/             # Output models returned to clients (PostResponse, TokenResponse, ErrorResponse, RegisterResponse, UserRoleResponse)
-├── Results/                # Internal outcome types for service calls (LoginResult, RegisterResult, PostUpdateResult, UpdateUserRoleResult)
-├── Helpers/                # Static helpers (MongoDbHelper, ClaimsPrincipalExtensions)
+├── Models/                # Domain model persisted to MongoDB (Post), Identity read-models (UserSummary, RoleSummary), and config (MongoDbSettings)
+├── Dto/                   # Input models for requests (CreatePostDto, EditPostDto, LoginDto, RegisterDto, UpdateUserRoleDto, CreateRoleDto, UpdateRolePermissionsDto)
+├── Responses/             # Output models returned to clients (PostResponse, TokenResponse, ErrorResponse, RegisterResponse, UserRoleResponse, RoleResponse, PermissionsResponse)
+├── Results/                # Internal outcome types for service calls (LoginResult, RegisterResult, PostUpdateResult, UpdateUserRoleResult, CreateRoleResult, UpdateRolePermissionsResult, DeleteRoleResult)
+├── Helpers/                # Static helpers (MongoDbHelper, ClaimsPrincipalExtensions, RoleManagerExtensions, IdentityRoleSeederExtensions)
 └── Program.cs             # Composition root: DI registrations, middleware pipeline
 
 BlogMVC.Tests/
 ├── Controllers/           # Unit tests (Moq) for controllers
-├── Services/               # Unit tests for PostService, AuthService, UserService
+├── Services/               # Unit tests for PostService, AuthService, UserService, RoleService
 ├── Providers/              # Unit tests for TokenProvider
 ├── IntegrationTests/       # Full-stack tests via WebApplicationFactory<Program>, real MongoDB
-└── Helpers/                # Test data factories (PostFactory, CreatePostDtoFactory, ...)
+└── Helpers/                # Test data factories (PostFactory, CreatePostDtoFactory, ...) and RoleManagerExtensions unit tests
 ```
 
 ## Why the split into Dto / Responses / Results
@@ -71,21 +81,31 @@ Three lookalike layers exist on purpose, each with a different job:
 ## Lifetimes
 
 Everything under `Infrastructure/` plus `PostService` is registered as a **singleton** — they're
-stateless wrappers around a shared `MongoClient`/config. `AuthService` and `UserService` are the
-exception: both are **scoped**, because they depend on Identity's `UserManager`/`SignInManager`, which
-are themselves scoped.
+stateless wrappers around a shared `MongoClient`/config. `AuthService`, `UserService` and `RoleService` are
+the exception: all three are **scoped**, because they depend on Identity's `UserManager`/`SignInManager`/
+`RoleManager`, which are themselves scoped.
 
 ## Authorization model
 
-Authorization checks a **permission claim**, not a role name. `Data/Roles.cs` names the Identity roles;
-`Data/Permissions.cs` names the permissions (`Posts.Create`, `Posts.CreateBulk`, `Posts.EditOwn`,
-`Posts.EditAny`, `Posts.DeleteOwn`, `Posts.DeleteAny`, `Users.ManageRoles`); `Data/RolePermissions.cs` is the
-static map from role to the permissions it grants. `TokenProvider` expands a user's roles into that
-permission set at login and embeds one `permission` claim per entry in the JWT, alongside the `Role` claims.
-`Program.cs` registers one named authorization policy per endpoint (`RequireClaim("permission", ...)` + the
-JWT bearer scheme), and controllers use `[Authorize(Policy = ...)]` instead of listing role names — so a
-user holding multiple roles gets the union of what they grant, and a policy never needs to know which roles
-exist.
+Authorization checks a **permission claim**, not a role name. `Data/Roles.cs` names the predefined,
+seeded-at-startup Identity roles; `Data/Permissions.cs` names the fixed set of permission claim values
+(`Posts.Create`, `Posts.CreateBulk`, `Posts.EditOwn`, `Posts.EditAny`, `Posts.DeleteOwn`, `Posts.DeleteAny`,
+`Users.ManageRoles`, `Roles.Manage`) — each wired to exactly one `[Authorize(Policy = ...)]` in
+`Program.cs`, so this list can't grow without a matching code change.
+
+Which roles grant which of these permissions is **runtime-editable**, not a compile-time map: each role's
+permissions are stored as Identity role claims (`AspNetRoleClaims`, of claim type `Permissions.ClaimType`),
+managed through `RoleManager<IdentityRole>.AddClaimAsync`/`RemoveClaimAsync`/`GetClaimsAsync`. An
+administrator creates roles and edits their permission sets via `RolesController`/`IRoleService`
+(see below); `Helpers/IdentityRoleSeederExtensions` seeds the 4 predefined roles with sensible default
+permissions the first time each is created, but never touches an existing role's permissions again, so an
+admin's edits survive a restart. At login, `AuthService` resolves the caller's permissions via
+`Helpers/RoleManagerExtensions.GetPermissionsAsync` (the distinct union across every role the user holds)
+and passes them to `TokenProvider.CreateToken`, which embeds one `permission` claim per entry in the JWT
+alongside the `Role` claims — so a user holding multiple roles gets the union of what they grant, and a
+policy never needs to know which roles exist. Because permissions are baked into the JWT at login, editing
+a role's permissions takes effect for a given user only on their next login (tokens are valid for 1 hour and
+carry no server-side session state to invalidate).
 
 - Reading posts (`GET api/blog`, `GET api/blog/{id}`, `GET api/blog/search?query=`) is public. Search matches
   a case-insensitive substring against Title or Description (`PostRepository.SearchAsync`, Mongo `$or` regex
@@ -103,13 +123,18 @@ exist.
 - Changing a user's role (`PUT api/users/{id}/role`) requires `Users.ManageRoles` — granted to
   Administrator only. It replaces the target's entire role set with the single requested role (no
   Own/Any distinction — there's no "ownership" concept for another user's role). 404 if the user id
-  doesn't exist, 400 if the requested role name isn't one of `Data.Roles.All`.
+  doesn't exist, 400 if the requested role name isn't a role that currently exists
+  (`RoleManager.RoleExistsAsync` — any role, not just the 4 predefined ones).
 - Listing users (`GET api/users`) requires the same `Users.ManageRoles` permission and returns every user's
   id, username, and current role (`UserService.GetUsersAsync`, via `UserManager.Users` + `GetRolesAsync` per
   user) — meant to feed the same role-management frontend as the PUT above, not a general-purpose user
   directory.
-- Listing assignable roles (`GET api/users/roles`) requires the same `Users.ManageRoles` permission and
-  returns `Data.Roles.All` unchanged — a static, non-Identity lookup meant to feed the role dropdown in the
-  same frontend, so it doesn't have to hardcode role names separately from the backend.
+- Role administration (`RolesController` at `api/roles`) requires `Roles.Manage` — granted to Administrator
+  only — on every endpoint: `GET api/roles` (every role with its current permissions), `GET api/roles/{name}`
+  (one role), `GET api/roles/permissions` (the fixed permission catalog, `Permissions.All`, for a picker UI),
+  `POST api/roles` (create with an initial permission set; 409 on a duplicate name, 400 on an unrecognized
+  permission), `PUT api/roles/{name}/permissions` (replace a role's entire permission set wholesale; 404/400),
+  and `DELETE api/roles/{name}` (404 if missing, 409 if any user still holds the role — deleting it would
+  silently strip their access).
 
 For day-to-day commands (running the app, tests, configuration) see the main [README](../README.md).

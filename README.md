@@ -8,7 +8,9 @@ A blog REST API built with ASP.NET Core and MongoDB.
 - Permission-based post authorization (roles grant permissions — Administrator/Editor/Author can create,
   bulk creation excludes Author; editing/deleting requires ownership, except Administrator, who can manage
   any post; Commentator can't create/edit/delete)
-- User listing and role administration (`api/users`, `api/users/{id}/role`), restricted to Administrator
+- User listing and role assignment (`api/users`, `api/users/{id}/role`), restricted to Administrator
+- Role administration (`api/roles`) — an Administrator can create roles and edit which permissions each one
+  grants at runtime, no redeploy required
 - Optimistic concurrency on post edits via ETag/If-Match, so concurrent edits don't silently overwrite each other
 - Unit and integration tests
 
@@ -41,10 +43,16 @@ secrets, ...) — these values are intentionally not committed in `appsettings.j
 4. Editing or deleting a post requires the token's user to be that post's author — except an
    Administrator, who can edit or delete any post.
 5. `PUT api/users/{id}/role` with `{ "role": "..." }` replaces a user's role; only an Administrator
-   token can call it (403 Forbidden otherwise). Returns 404 if the user id doesn't exist, 400 if the
-   role name isn't recognized.
+   token can call it (403 Forbidden otherwise). Returns 404 if the user id doesn't exist, 400 if no role
+   with that name exists (any role, not just a predefined one).
 6. `GET api/users` lists every user with their id, username, and current role; same Administrator-only
    restriction as #5. Meant to feed a frontend role-management UI.
+7. `GET api/roles` lists every role with its currently granted permissions; `GET api/roles/permissions`
+   lists every permission a role can be granted. `POST api/roles` with
+   `{ "name": "...", "permissions": [...] }` creates a role (409 on a duplicate name, 400 on an unrecognized
+   permission). `PUT api/roles/{name}/permissions` with `{ "permissions": [...] }` replaces a role's entire
+   permission set. `DELETE api/roles/{name}` deletes a role (409 if any user still holds it). All require an
+   Administrator token.
 
 ## Architecture
 

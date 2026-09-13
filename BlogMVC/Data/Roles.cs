@@ -1,9 +1,10 @@
 namespace BlogMVC.Data;
 
 /// <summary>
-///     Predefined Identity role names, seeded into <c>AspNetRoles</c> at startup (see <see cref="Program" />).
-///     Each role grants a set of <see cref="Permissions" /> via <see cref="RolePermissions" />; endpoints
-///     check the permission, not the role name, so a user holding multiple roles gets their union.
+///     Predefined Identity role names, seeded into <c>AspNetRoles</c> at startup with default permissions
+///     (see <see cref="Helpers.IdentityRoleSeederExtensions" />). An administrator can create additional roles
+///     and edit any role's permissions at runtime via <see cref="Services.IRoleService" />; endpoints check the
+///     permission claim, not the role name, so a user holding multiple roles gets their union.
 /// </summary>
 public static class Roles
 {

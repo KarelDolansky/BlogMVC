@@ -17,5 +17,6 @@ services:
     volumes:
     - "/home/karel/RiderProjects/BlogMVC/BlogMVC:/app-1:rw"
     - "/home/karel/RiderProjects/BlogMVC:/src:rw"
+    - "/home/karel/.microsoft/usersecrets:/home/app/.microsoft/usersecrets"
     - "/home/karel/.nuget/packages:/home/app/.nuget/packages"
     working_dir: "/app-1"
