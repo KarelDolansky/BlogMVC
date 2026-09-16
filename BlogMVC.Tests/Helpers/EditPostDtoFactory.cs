@@ -8,6 +8,7 @@ namespace BlogMVC.Tests.Helpers;
 /// </summary>
 public class EditPostDtoFactory
 {
+    /// <summary>The DTO being built, pre-populated with default title/description/content.</summary>
     private readonly EditPostDto _entity = new()
     {
         Title = "Title",
@@ -16,6 +17,8 @@ public class EditPostDtoFactory
     };
 
     /// <summary>Sets the title.</summary>
+    /// <param name="title">The title to assign.</param>
+    /// <returns>This factory, for chaining.</returns>
     public EditPostDtoFactory WithTitle(string title)
     {
         _entity.Title = title;
@@ -23,6 +26,8 @@ public class EditPostDtoFactory
     }
 
     /// <summary>Sets the description.</summary>
+    /// <param name="description">The description to assign.</param>
+    /// <returns>This factory, for chaining.</returns>
     public EditPostDtoFactory WithDescription(string description)
     {
         _entity.Description = description;
@@ -30,13 +35,16 @@ public class EditPostDtoFactory
     }
 
     /// <summary>Sets the content.</summary>
+    /// <param name="content">The content to assign.</param>
+    /// <returns>This factory, for chaining.</returns>
     public EditPostDtoFactory WithContent(string content)
     {
         _entity.Content = content;
         return this;
     }
 
-    /// <summary>Returns the built <see cref="EditPostDto" /> instance.</summary>
+    /// <summary>Builds the configured <see cref="EditPostDto" /> instance.</summary>
+    /// <returns>The built <see cref="EditPostDto" />.</returns>
     public EditPostDto Build()
     {
         return _entity;

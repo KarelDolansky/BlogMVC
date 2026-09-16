@@ -8,6 +8,7 @@ namespace BlogMVC.Data;
 ///     Blog posts are NOT part of this context – they are stored separately in MongoDB
 ///     (see <see cref="BlogMVC.Infrastructure.Repositories.PostRepository"/>). This context runs on SQLite.
 /// </summary>
+/// <param name="options">EF Core options (connection string, provider) configured in <c>Program.cs</c>.</param>
 public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options) : IdentityDbContext(options)
 {
 }

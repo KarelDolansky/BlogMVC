@@ -29,6 +29,7 @@ public abstract class BlogControllerTestBase : IClassFixture<WebApplicationFacto
     /// <summary>Default password used for test-registered Identity accounts.</summary>
     protected const string DefaultPassword = "Password123!";
 
+    /// <summary>Case-insensitive JSON options used to deserialize responses from the test host.</summary>
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
     /// <summary>Fixed reference date used in tests instead of the real current time.</summary>
@@ -56,6 +57,10 @@ public abstract class BlogControllerTestBase : IClassFixture<WebApplicationFacto
         _identityConnection = new SqliteConnection("DataSource=:memory:");
         _identityConnection.Open();
 
+        // Schema creation is left to Program.cs's own MigrateDatabaseAsync call, triggered on host startup
+        // (Factory.CreateClient() below) against this same open in-memory connection — applying real EF Core
+        // migrations here instead of EnsureCreated() keeps tests on the exact same schema-bootstrap path as
+        // production.
         Factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");
@@ -67,10 +72,6 @@ public abstract class BlogControllerTestBase : IClassFixture<WebApplicationFacto
         });
 
         Client = Factory.CreateClient();
-
-        using var scope = Factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
-        db.Database.EnsureCreated();
     }
 
     /// <summary>Clears all documents in the posts collection before every test so previous state doesn't leak in.</summary>
@@ -98,8 +99,12 @@ public abstract class BlogControllerTestBase : IClassFixture<WebApplicationFacto
     /// </summary>
     /// <param name="userName">Display name for the new user; also used to derive a unique email.</param>
     /// <param name="password">Password for the new account; defaults to <see cref="DefaultPassword" />.</param>
+    /// <param name="role">
+    ///     Identity role (see <see cref="Roles" />) to assign before logging in, so the issued JWT carries the
+    ///     matching Role claim; null leaves the user without any role.
+    /// </param>
     protected async Task<(HttpClient Client, string UserId)> CreateAuthenticatedClientAsync(
-        string userName = "TestUser", string password = DefaultPassword)
+        string userName = "TestUser", string password = DefaultPassword, string? role = null)
     {
         var email = $"{userName.ToLowerInvariant()}-{Guid.NewGuid():N}@example.com";
         string userId;
@@ -112,6 +117,9 @@ public abstract class BlogControllerTestBase : IClassFixture<WebApplicationFacto
             if (!result.Succeeded)
                 throw new InvalidOperationException(
                     $"Failed to create test user: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+
+            if (role != null)
+                await userManager.AddToRoleAsync(user, role);
 
             userId = user.Id;
         }

@@ -5,12 +5,16 @@ services:
       context: .
       dockerfile: BlogMVC/Dockerfile
     ports:
-      - "8080:8080"
-    volumes:
-      - .:/app:z
+      - "5125:8080"
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - MongoDb__ConnectionString=mongodb://mongo:27017
+      - Jwt__Key=${JWT_KEY:?Set JWT_KEY in a .env file or your shell environment}
+      - Jwt__Issuer=${JWT_ISSUER:-BlogMVC}
+      - Jwt__Audience=${JWT_AUDIENCE:-BlogMVC}
+      - ConnectionStrings__DefaultConnection=DataSource=/app/data/app.db;Cache=Shared
+    volumes:
+      - sqlite_data:/app/data
     depends_on:
       mongo:
         condition: service_healthy
@@ -31,4 +35,5 @@ services:
 
 volumes:
   mongo_data:
+  sqlite_data:
 

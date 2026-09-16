@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using BlogMVC.Data;
 using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Infrastructure.Providers;
 using Microsoft.AspNetCore.Identity;
@@ -17,19 +18,38 @@ namespace BlogMVC.Tests.Providers;
 /// </summary>
 public class TokenProviderTests
 {
+    /// <summary>Audience value returned by the mocked configuration.</summary>
     private const string DefaultAudience = "defaultAudience";
+
+    /// <summary>Issuer value returned by the mocked configuration.</summary>
     private const string DefaultIssuer = "defaultIssuer";
+
+    /// <summary>Signing key returned by the mocked configuration.</summary>
     private const string DefaultKey = "this-is-a-sufficiently-long-test-only-signing-key-1234567890";
+
+    /// <summary>Fixed "current time" returned by the mocked <see cref="IDateTimeProvider" />.</summary>
     private static readonly DateTime DefaultDate = new(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
+    /// <summary>Empty permission set used by tests that don't care about permissions.</summary>
+    private readonly string[] _defaultPermissions = [];
+
+    /// <summary>Empty role set used by tests that don't care about roles/permissions.</summary>
+    private readonly string[] _defaultRoles = [];
+
+    /// <summary>Identity user passed to <see cref="TokenProvider.CreateToken" /> in most tests.</summary>
     private readonly IdentityUser _defaultUser = new()
     {
         Id = "defaultUserId",
         UserName = "defaultUserName"
     };
 
+    /// <summary>System under test, constructed with mocked configuration and date/time provider.</summary>
     private readonly TokenProvider _tokenProvider;
 
+    /// <summary>
+    ///     Sets up <see cref="_tokenProvider" /> with mocked <see cref="IConfiguration" />/
+    ///     <see cref="IDateTimeProvider" />.
+    /// </summary>
     public TokenProviderTests()
     {
         var configurationMock = new Mock<IConfiguration>();
@@ -50,7 +70,7 @@ public class TokenProviderTests
     public void CreateToken_ReturnsNonEmptyToken()
     {
         // Act
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles, _defaultPermissions);
 
         // Assert
         Assert.False(string.IsNullOrWhiteSpace(token));
@@ -61,7 +81,7 @@ public class TokenProviderTests
     public void CreateToken_IncludesNameIdentifierClaim_WithUserId()
     {
         // Act
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles, _defaultPermissions);
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         // Assert
@@ -74,7 +94,7 @@ public class TokenProviderTests
     public void CreateToken_IncludesNameClaim_WithUserName()
     {
         // Act
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles, _defaultPermissions);
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         // Assert
@@ -82,12 +102,67 @@ public class TokenProviderTests
         Assert.Equal(_defaultUser.UserName, claim.Value);
     }
 
+    /// <summary>Verifies that CreateToken includes one Role claim per role passed in.</summary>
+    [Fact]
+    public void CreateToken_IncludesRoleClaim_ForEachRole()
+    {
+        // Act
+        var token = _tokenProvider.CreateToken(_defaultUser, ["Author", "Editor"], _defaultPermissions);
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        // Assert
+        var roleClaims = jwt.Claims.Where(c => c.Type == ClaimTypes.Role).Select(c => c.Value);
+        Assert.Equal(["Author", "Editor"], roleClaims);
+    }
+
+    /// <summary>Verifies that CreateToken with no roles adds no Role claims.</summary>
+    [Fact]
+    public void CreateToken_WithNoRoles_AddsNoRoleClaims()
+    {
+        // Act
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles, _defaultPermissions);
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        // Assert
+        Assert.DoesNotContain(jwt.Claims, c => c.Type == ClaimTypes.Role);
+    }
+
+    /// <summary>
+    ///     Verifies that CreateToken adds one permission claim per entry passed in. Resolving which permissions
+    ///     a role grants is the caller's job now (<see cref="Helpers.RoleManagerExtensions.GetPermissionsAsync" />)
+    ///     — TokenProvider just serializes whatever it's given.
+    /// </summary>
+    [Fact]
+    public void CreateToken_IncludesPermissionClaim_ForEachPermissionPassedIn()
+    {
+        // Act
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles,
+            [Permissions.Posts.Create, Permissions.Posts.EditOwn]);
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        // Assert
+        var permissionClaims = jwt.Claims.Where(c => c.Type == Permissions.ClaimType).Select(c => c.Value);
+        Assert.Equal([Permissions.Posts.Create, Permissions.Posts.EditOwn], permissionClaims.Order());
+    }
+
+    /// <summary>Verifies that CreateToken with no permissions adds no permission claims.</summary>
+    [Fact]
+    public void CreateToken_WithNoPermissions_AddsNoPermissionClaims()
+    {
+        // Act
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles, _defaultPermissions);
+        var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
+
+        // Assert
+        Assert.DoesNotContain(jwt.Claims, c => c.Type == Permissions.ClaimType);
+    }
+
     /// <summary>Verifies that CreateToken sets the issuer and audience from configuration.</summary>
     [Fact]
     public void CreateToken_SetsIssuerAndAudience_FromConfiguration()
     {
         // Act
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles, _defaultPermissions);
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         // Assert
@@ -100,7 +175,7 @@ public class TokenProviderTests
     public void CreateToken_SetsExpiration_OneHourFromDateTimeProviderNow()
     {
         // Act
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles, _defaultPermissions);
         var jwt = new JwtSecurityTokenHandler().ReadJwtToken(token);
 
         // Assert
@@ -115,7 +190,7 @@ public class TokenProviderTests
     public void CreateToken_SignsTokenWithConfiguredKey_ValidatesWithSameKey()
     {
         // Arrange
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles, _defaultPermissions);
         var validationParameters = new TokenValidationParameters
         {
             ValidIssuer = DefaultIssuer,
@@ -133,7 +208,7 @@ public class TokenProviderTests
     public void CreateToken_SignsTokenWithConfiguredKey_FailsValidationWithDifferentKey()
     {
         // Arrange
-        var token = _tokenProvider.CreateToken(_defaultUser);
+        var token = _tokenProvider.CreateToken(_defaultUser, _defaultRoles, _defaultPermissions);
         var validationParameters = new TokenValidationParameters
         {
             ValidIssuer = DefaultIssuer,

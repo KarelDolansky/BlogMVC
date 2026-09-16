@@ -8,6 +8,6 @@ namespace BlogMVC.Infrastructure.Providers;
 /// </summary>
 public class SystemDateTimeProvider : IDateTimeProvider
 {
-    /// <inheritdoc />
+    /// <summary>Returns <see cref="DateTime.UtcNow" />.</summary>
     public DateTime Now => DateTime.UtcNow;
 }

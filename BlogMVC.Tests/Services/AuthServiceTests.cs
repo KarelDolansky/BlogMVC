@@ -1,3 +1,4 @@
+using BlogMVC.Data;
 using BlogMVC.Infrastructure.Interfaces;
 using BlogMVC.Results;
 using BlogMVC.Services;
@@ -17,11 +18,19 @@ namespace BlogMVC.Tests.Services;
 /// </summary>
 public class AuthServiceTests
 {
+    /// <summary>System under test, constructed with mocked Identity managers and token provider.</summary>
     private readonly AuthService _authService;
+
+    /// <summary>Email used across tests for the default user.</summary>
     private readonly string _defaultEmail = "test@example.com";
+
+    /// <summary>Password used across tests for the default user.</summary>
     private readonly string _defaultPassword = "Password123!";
+
+    /// <summary>Token value the mocked <see cref="ITokenProvider" /> returns for a successful login.</summary>
     private readonly string _defaultToken = "fake-jwt-token";
 
+    /// <summary>Identity user returned by the mocked <see cref="UserManager{TUser}" /> in most tests.</summary>
     private readonly IdentityUser _defaultUser = new()
     {
         Id = "defaultUserId",
@@ -29,23 +38,38 @@ public class AuthServiceTests
         UserName = "test@example.com"
     };
 
+    /// <summary>
+    ///     Mocked <see cref="RoleManager{TRole}" /> passed to <see cref="_authService" />; unconfigured, so
+    ///     role→permission lookups resolve to no permissions unless a test sets one up.
+    /// </summary>
+    private readonly Mock<RoleManager<IdentityRole>> _roleManagerMock;
+
+    /// <summary>Mocked <see cref="SignInManager{TUser}" /> passed to <see cref="_authService" />.</summary>
     private readonly Mock<SignInManager<IdentityUser>> _signInManagerMock;
+
+    /// <summary>Mocked <see cref="ITokenProvider" /> passed to <see cref="_authService" />.</summary>
     private readonly Mock<ITokenProvider> _tokenProviderMock;
+
+    /// <summary>Mocked <see cref="UserManager{TUser}" /> passed to <see cref="_authService" />.</summary>
     private readonly Mock<UserManager<IdentityUser>> _userManagerMock;
 
+    /// <summary>Builds <see cref="_authService" /> with fresh mocks for each test.</summary>
     public AuthServiceTests()
     {
         _userManagerMock = CreateUserManagerMock();
         _signInManagerMock = CreateSignInManagerMock(_userManagerMock.Object);
+        _roleManagerMock = CreateRoleManagerMock();
         _tokenProviderMock = new Mock<ITokenProvider>();
 
         _authService = new AuthService(
             _userManagerMock.Object,
             _signInManagerMock.Object,
+            _roleManagerMock.Object,
             _tokenProviderMock.Object);
     }
 
     /// <summary>Builds a mocked <see cref="UserManager{TUser}" /> (it has no parameterless constructor).</summary>
+    /// <returns>A mock with a mocked <see cref="IUserStore{TUser}" /> and null dependencies otherwise.</returns>
     private static Mock<UserManager<IdentityUser>> CreateUserManagerMock()
     {
         var store = new Mock<IUserStore<IdentityUser>>();
@@ -53,7 +77,17 @@ public class AuthServiceTests
             null!);
     }
 
+    /// <summary>Builds a mocked <see cref="RoleManager{TRole}" /> (it has no parameterless constructor).</summary>
+    /// <returns>A mock with a mocked <see cref="IRoleStore{TRole}" /> and null dependencies otherwise.</returns>
+    private static Mock<RoleManager<IdentityRole>> CreateRoleManagerMock()
+    {
+        var store = new Mock<IRoleStore<IdentityRole>>();
+        return new Mock<RoleManager<IdentityRole>>(store.Object, null!, null!, null!, null!);
+    }
+
     /// <summary>Builds a mocked <see cref="SignInManager{TUser}" /> (it has no parameterless constructor).</summary>
+    /// <param name="userManager"><see cref="UserManager{TUser}" /> to construct the sign-in manager with.</param>
+    /// <returns>A mock with mocked context accessor/claims factory and null dependencies otherwise.</returns>
     private static Mock<SignInManager<IdentityUser>> CreateSignInManagerMock(UserManager<IdentityUser> userManager)
     {
         var contextAccessor = new Mock<IHttpContextAccessor>();
@@ -145,7 +179,10 @@ public class AuthServiceTests
         _signInManagerMock
             .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
             .ReturnsAsync(SignInResult.Success);
-        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser)).Returns(_defaultToken);
+        _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(new List<string>());
+        _tokenProviderMock.Setup(t =>
+                t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>()))
+            .Returns(_defaultToken);
 
         // Act
         await _authService.LoginAsync(loginDto);
@@ -164,7 +201,10 @@ public class AuthServiceTests
         _signInManagerMock
             .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
             .ReturnsAsync(SignInResult.Success);
-        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser)).Returns(_defaultToken);
+        _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(new List<string>());
+        _tokenProviderMock.Setup(t =>
+                t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>()))
+            .Returns(_defaultToken);
 
         // Act
         var result = await _authService.LoginAsync(loginDto);
@@ -185,13 +225,40 @@ public class AuthServiceTests
         _signInManagerMock
             .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
             .ReturnsAsync(SignInResult.Success);
-        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser)).Returns(_defaultToken);
+        _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(new List<string>());
+        _tokenProviderMock.Setup(t =>
+                t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>()))
+            .Returns(_defaultToken);
 
         // Act
         await _authService.LoginAsync(loginDto);
 
         // Assert
-        _tokenProviderMock.Verify(t => t.CreateToken(_defaultUser), Times.Once);
+        _tokenProviderMock.Verify(
+            t => t.CreateToken(_defaultUser, It.IsAny<IEnumerable<string>>(), It.IsAny<IEnumerable<string>>()),
+            Times.Once);
+    }
+
+    /// <summary>Verifies that LoginAsync passes the user's Identity roles through to CreateToken.</summary>
+    [Fact]
+    public async Task LoginAsync_WithValidCredentials_PassesUserRolesToTokenProvider()
+    {
+        // Arrange
+        var loginDto = new LoginDtoFactory().WithEmail(_defaultEmail).WithPassword(_defaultPassword).Build();
+        var roles = new List<string> { Roles.Author, Roles.Editor };
+        _userManagerMock.Setup(u => u.FindByEmailAsync(_defaultEmail)).ReturnsAsync(_defaultUser);
+        _signInManagerMock
+            .Setup(s => s.CheckPasswordSignInAsync(_defaultUser, _defaultPassword, true))
+            .ReturnsAsync(SignInResult.Success);
+        _userManagerMock.Setup(u => u.GetRolesAsync(_defaultUser)).ReturnsAsync(roles);
+        _tokenProviderMock.Setup(t => t.CreateToken(_defaultUser, roles, It.IsAny<IEnumerable<string>>()))
+            .Returns(_defaultToken);
+
+        // Act
+        await _authService.LoginAsync(loginDto);
+
+        // Assert
+        _tokenProviderMock.Verify(t => t.CreateToken(_defaultUser, roles, It.IsAny<IEnumerable<string>>()), Times.Once);
     }
 
     // ---------- RegisterAsync ----------
@@ -235,9 +302,9 @@ public class AuthServiceTests
         Assert.Null(result.Errors);
     }
 
-    /// <summary>Verifies that RegisterAsync locks the newly created account out indefinitely.</summary>
+    /// <summary>Verifies that RegisterAsync assigns the default Commentator role to the newly created account.</summary>
     [Fact]
-    public async Task RegisterAsync_WithValidData_LocksTheAccount()
+    public async Task RegisterAsync_WithValidData_AssignsCommentatorRole()
     {
         // Arrange
         var registerDto = new RegisterDtoFactory().Build();
@@ -247,18 +314,14 @@ public class AuthServiceTests
             .Callback<IdentityUser, string>((user, _) => createdUser = user)
             .ReturnsAsync(IdentityResult.Success);
         _userManagerMock
-            .Setup(u => u.SetLockoutEnabledAsync(It.IsAny<IdentityUser>(), true))
-            .ReturnsAsync(IdentityResult.Success);
-        _userManagerMock
-            .Setup(u => u.SetLockoutEndDateAsync(It.IsAny<IdentityUser>(), DateTimeOffset.MaxValue))
+            .Setup(u => u.AddToRoleAsync(It.IsAny<IdentityUser>(), Roles.Commentator))
             .ReturnsAsync(IdentityResult.Success);
 
         // Act
         await _authService.RegisterAsync(registerDto);
 
         // Assert
-        _userManagerMock.Verify(u => u.SetLockoutEnabledAsync(createdUser!, true), Times.Once);
-        _userManagerMock.Verify(u => u.SetLockoutEndDateAsync(createdUser!, DateTimeOffset.MaxValue), Times.Once);
+        _userManagerMock.Verify(u => u.AddToRoleAsync(createdUser!, Roles.Commentator), Times.Once);
     }
 
     /// <summary>Verifies that RegisterAsync when account creation fails (e.g. duplicate email) returns the Identity errors.</summary>
@@ -281,9 +344,9 @@ public class AuthServiceTests
         Assert.Contains(error.Description, result.Errors!);
     }
 
-    /// <summary>Verifies that RegisterAsync when account creation fails does not lock out a (non-existent) account.</summary>
+    /// <summary>Verifies that RegisterAsync when account creation fails does not assign a role to a (non-existent) account.</summary>
     [Fact]
-    public async Task RegisterAsync_WhenCreateFails_DoesNotAttemptToLockAccount()
+    public async Task RegisterAsync_WhenCreateFails_DoesNotAssignRole()
     {
         // Arrange
         var registerDto = new RegisterDtoFactory().Build();
@@ -296,8 +359,7 @@ public class AuthServiceTests
         await _authService.RegisterAsync(registerDto);
 
         // Assert
-        _userManagerMock.Verify(u => u.SetLockoutEnabledAsync(It.IsAny<IdentityUser>(), It.IsAny<bool>()), Times.Never);
         _userManagerMock.Verify(
-            u => u.SetLockoutEndDateAsync(It.IsAny<IdentityUser>(), It.IsAny<DateTimeOffset?>()), Times.Never);
+            u => u.AddToRoleAsync(It.IsAny<IdentityUser>(), It.IsAny<string>()), Times.Never);
     }
 }

@@ -9,19 +9,30 @@ using Moq;
 namespace BlogMVC.Tests.Services;
 
 /// <summary>
-///     Unit tests for <see cref="PostService" /> using a mocked <see cref="IPostRepository" /> and
-///     <see cref="IDateTimeProvider" />. Verify correct mapping from DTOs to the <see cref="Post" /> entity,
-///     timestamp assignment, and delegation of calls to the repository.
+///     Unit tests for <see cref="PostService" /> with mocked <see cref="IPostRepository" />/
+///     <see cref="IDateTimeProvider" /> — verifies DTO→<see cref="Post" /> mapping and repository delegation.
 /// </summary>
 public class PostServiceTests
 {
+    /// <summary>Fixed "current time" returned by the mocked <see cref="IDateTimeProvider" />.</summary>
     private static readonly DateTime DefaultDate = new(2001, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+    /// <summary>Mocked <see cref="IDateTimeProvider" /> passed to <see cref="_postService" />.</summary>
     private readonly Mock<IDateTimeProvider> _dateTimeProviderMock;
+
+    /// <summary>Author display name used across tests.</summary>
     private readonly string _defaultAuthor = "defaultAuthor";
+
+    /// <summary>Author Id used across tests.</summary>
     private readonly string _defaultAuthorId = "defaultAuthorId";
+
+    /// <summary>Mocked <see cref="IPostRepository" /> passed to <see cref="_postService" />.</summary>
     private readonly Mock<IPostRepository> _postRepositoryMock;
+
+    /// <summary>System under test, constructed with mocked date/time provider and post repository.</summary>
     private readonly PostService _postService;
 
+    /// <summary>Builds <see cref="_postService" /> with fresh mocks for each test.</summary>
     public PostServiceTests()
     {
         _postRepositoryMock = new Mock<IPostRepository>();
@@ -418,8 +429,9 @@ public class PostServiceTests
         // Arrange
         _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
 
+        var originalPublishDate = new DateTime(1999, 5, 5, 0, 0, 0, DateTimeKind.Utc);
         var originalPost = new PostFactory()
-            .WithPublishDate(new DateTime(1999, 5, 5, 0, 0, 0, DateTimeKind.Utc))
+            .WithPublishDate(originalPublishDate)
             .WithAuthor("OriginalAuthor")
             .WithAuthorId("OriginalAuthorId")
             .Build();
@@ -435,7 +447,7 @@ public class PostServiceTests
 
         // Assert
         _postRepositoryMock.Verify(p => p.ReplaceOneAsync("1", 0, It.Is<Post>(post1 =>
-            post1.PublishDate == originalPost.PublishDate &&
+            post1.PublishDate == originalPublishDate &&
             post1.Author == "OriginalAuthor" &&
             post1.AuthorId == "OriginalAuthorId"
         )), Times.Once);
@@ -535,6 +547,30 @@ public class PostServiceTests
 
         // Assert
         Assert.Equal(PostUpdateResult.Conflict, result);
+    }
+
+    /// <summary>
+    ///     Verifies that EditPostAsync returns NotFound when the repository reports it (post fetched
+    ///     successfully but deleted by someone else before ReplaceOneAsync ran).
+    /// </summary>
+    [Fact]
+    public async Task EditPostAsync_WhenRepositoryReportsNotFoundAfterFetch_ReturnsNotFound()
+    {
+        // Arrange
+        _dateTimeProviderMock.Setup(t => t.Now).Returns(DefaultDate);
+        var post = new PostFactory()
+            .Build();
+        _postRepositoryMock.Setup(p => p.FindAsync("1")).ReturnsAsync(post);
+        _postRepositoryMock.Setup(p => p.ReplaceOneAsync("1", 0, It.IsAny<Post>()))
+            .ReturnsAsync(PostUpdateResult.NotFound);
+        var editPostDto = new EditPostDtoFactory()
+            .Build();
+
+        // Act
+        var result = await _postService.EditPostAsync("1", editPostDto, 0);
+
+        // Assert
+        Assert.Equal(PostUpdateResult.NotFound, result);
     }
 
     // ---------- SearchAsync ----------

@@ -8,6 +8,7 @@ namespace BlogMVC.Tests.Helpers;
 /// </summary>
 public class LoginDtoFactory
 {
+    /// <summary>The DTO being built, pre-populated with a default email/password.</summary>
     private LoginDto _entity = new LoginDto
     {
         Email = "test@example.com",
@@ -15,6 +16,8 @@ public class LoginDtoFactory
     };
 
     /// <summary>Sets the email.</summary>
+    /// <param name="email">The email to assign.</param>
+    /// <returns>This factory, for chaining.</returns>
     public LoginDtoFactory WithEmail(string email)
     {
         _entity.Email = email;
@@ -22,13 +25,16 @@ public class LoginDtoFactory
     }
 
     /// <summary>Sets the password.</summary>
+    /// <param name="password">The password to assign.</param>
+    /// <returns>This factory, for chaining.</returns>
     public LoginDtoFactory WithPassword(string password)
     {
         _entity.Password = password;
         return this;
     }
 
-    /// <summary>Returns the built <see cref="LoginDto"/> instance.</summary>
+    /// <summary>Builds the configured <see cref="LoginDto" /> instance.</summary>
+    /// <returns>The built <see cref="LoginDto" />.</returns>
     public LoginDto Build()
     {
         return _entity;
