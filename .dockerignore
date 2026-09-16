@@ -1,5 +1,8 @@
 ﻿**/.dockerignore
 **/.env
+**/*.db
+**/*.db-shm
+**/*.db-wal
 **/.git
 **/.gitignore
 **/.project

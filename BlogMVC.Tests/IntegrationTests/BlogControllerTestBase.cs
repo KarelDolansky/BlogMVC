@@ -57,16 +57,10 @@ public abstract class BlogControllerTestBase : IClassFixture<WebApplicationFacto
         _identityConnection = new SqliteConnection("DataSource=:memory:");
         _identityConnection.Open();
 
-        // Create the Identity schema directly on the connection before the host starts: Program.cs seeds
-        // predefined roles during startup (triggered by Factory.CreateClient() below), which requires the
-        // AspNetRoles table to already exist.
-        var identityOptions = new DbContextOptionsBuilder<ApplicationDbContext>()
-            .UseSqlite(_identityConnection).Options;
-        using (var db = new ApplicationDbContext(identityOptions))
-        {
-            db.Database.EnsureCreated();
-        }
-
+        // Schema creation is left to Program.cs's own MigrateDatabaseAsync call, triggered on host startup
+        // (Factory.CreateClient() below) against this same open in-memory connection — applying real EF Core
+        // migrations here instead of EnsureCreated() keeps tests on the exact same schema-bootstrap path as
+        // production.
         Factory = factory.WithWebHostBuilder(builder =>
         {
             builder.UseEnvironment("Testing");

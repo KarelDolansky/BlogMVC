@@ -122,6 +122,10 @@ builder.Services.AddScoped<IRoleService, RoleService>();
 
 var app = builder.Build();
 
+// Applies pending EF Core migrations, creating the Identity schema on a brand-new database file
+// (e.g. a fresh Docker volume) before anything queries it.
+await app.MigrateDatabaseAsync();
+
 // Seeds predefined Identity roles and their default permission claims; existing roles are left untouched
 // (see IdentityRoleSeederExtensions and IRoleService for runtime role/permission administration).
 await app.SeedIdentityRolesAsync();

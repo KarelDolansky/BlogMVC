@@ -29,6 +29,12 @@ Before running, provide `Jwt:Key` (and optionally `Jwt:Issuer`/`Jwt:Audience`) t
 configuration mechanism of choice (environment variables, user-secrets, Docker/Kubernetes
 secrets, ...) — these values are intentionally not committed in `appsettings.json`.
 
+`docker compose up -d` builds and runs the full stack — the `blogmvc` API container alongside MongoDB —
+not just MongoDB, so it also needs `Jwt:Key`. Copy `.env.example` to `.env` and set `JWT_KEY` there; Compose
+reads it automatically (`.env` is gitignored, so the real value never gets committed). The containerized
+app's Identity data (SQLite) persists in a named `sqlite_data` volume, same as `mongo_data` does for posts —
+both survive a `docker compose down`/`up` cycle.
+
 ## REST API Authentication
 
 1. `POST api/auth/register` with `{ "email": "...", "password": "..." }` to create an Identity
