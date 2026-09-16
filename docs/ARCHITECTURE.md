@@ -55,7 +55,7 @@ BlogMVC/
 ├── Dto/                   # Input models for requests (CreatePostDto, EditPostDto, LoginDto, RegisterDto, UpdateUserRoleDto, CreateRoleDto, UpdateRolePermissionsDto)
 ├── Responses/             # Output models returned to clients (PostResponse, TokenResponse, ErrorResponse, RegisterResponse, UserRoleResponse, RoleResponse, PermissionsResponse)
 ├── Results/                # Internal outcome types for service calls (LoginResult, RegisterResult, PostUpdateResult, UpdateUserRoleResult, CreateRoleResult, UpdateRolePermissionsResult, DeleteRoleResult)
-├── Helpers/                # Static helpers (MongoDbHelper, ClaimsPrincipalExtensions, RoleManagerExtensions, IdentityRoleSeederExtensions)
+├── Helpers/                # Static helpers (MongoDbHelper, ClaimsPrincipalExtensions, RoleManagerExtensions, IdentityRoleSeederExtensions, DatabaseMigrationExtensions)
 └── Program.cs             # Composition root: DI registrations, middleware pipeline
 
 BlogMVC.Tests/
@@ -99,7 +99,13 @@ managed through `RoleManager<IdentityRole>.AddClaimAsync`/`RemoveClaimAsync`/`Ge
 administrator creates roles and edits their permission sets via `RolesController`/`IRoleService`
 (see below); `Helpers/IdentityRoleSeederExtensions` seeds the 4 predefined roles with sensible default
 permissions the first time each is created, but never touches an existing role's permissions again, so an
-admin's edits survive a restart. At login, `AuthService` resolves the caller's permissions via
+admin's edits survive a restart. `Program.cs` calls `Helpers/DatabaseMigrationExtensions.MigrateDatabaseAsync`
+once at startup, before seeding, to apply any pending EF Core migrations — this is what creates the Identity
+schema on a brand-new SQLite database file (e.g. a fresh Docker volume) so seeding has a table to write into.
+The containerized `blogmvc` service (`compose.yaml`) points the SQLite connection string at
+`/app/data/app.db`, backed by a named `sqlite_data` volume, instead of the default in-project-folder path
+`dotnet run` uses locally — so registered users/roles survive a `docker compose down`/`up` cycle the same
+way MongoDB posts do via `mongo_data`. At login, `AuthService` resolves the caller's permissions via
 `Helpers/RoleManagerExtensions.GetPermissionsAsync` (the distinct union across every role the user holds)
 and passes them to `TokenProvider.CreateToken`, which embeds one `permission` claim per entry in the JWT
 alongside the `Role` claims — so a user holding multiple roles gets the union of what they grant, and a

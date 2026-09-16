@@ -19,5 +19,6 @@ RUN dotnet publish "./BlogMVC.csproj" -c $BUILD_CONFIGURATION -o /app/publish /p
 
 FROM base AS final
 WORKDIR /app
+RUN mkdir -p /app/data
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "BlogMVC.dll"]
