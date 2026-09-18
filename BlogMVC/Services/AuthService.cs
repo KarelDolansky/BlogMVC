@@ -21,11 +21,21 @@ public class AuthService(
     RoleManager<IdentityRole> roleManager,
     ITokenProvider tokenProvider) : IAuthService
 {
+    /// <summary>Placeholder user passed to the password hasher when the requested email doesn't exist.</summary>
+    private static readonly IdentityUser DummyUser = new();
+
+    /// <summary>
+    ///     Hash verified against when the requested email doesn't exist; created on first use with the
+    ///     configured hasher so its cost matches a real verification.
+    /// </summary>
+    private static string? _dummyPasswordHash;
+
     /// <summary>
     ///     Looks up the user by email via <c>UserManager.FindByEmailAsync</c>, checks the password via
     ///     <c>SignInManager.CheckPasswordSignInAsync</c> (with lockout tracking on failure), resolves the
     ///     permissions the user's roles currently grant (<see cref="RoleManagerExtensions.GetPermissionsAsync" />),
-    ///     and on success issues a JWT via <see cref="ITokenProvider" />.
+    ///     and on success issues a JWT via <see cref="ITokenProvider" />. An unknown email still costs one
+    ///     password-hash verification, so response time doesn't reveal whether the email exists.
     /// </summary>
     /// <param name="loginDto">The email/password credentials to validate.</param>
     /// <returns>A <see cref="LoginResult" /> carrying the issued JWT on success, or the failure reason.</returns>
@@ -33,7 +43,10 @@ public class AuthService(
     {
         var user = await userManager.FindByEmailAsync(loginDto.Email);
         if (user == null)
+        {
+            VerifyAgainstDummyHash(loginDto.Password);
             return LoginResult.Failure(LoginFailureReason.InvalidCredentials);
+        }
 
         var result = await signInManager.CheckPasswordSignInAsync(
             user, loginDto.Password, true);
@@ -65,5 +78,18 @@ public class AuthService(
         await userManager.AddToRoleAsync(user, Roles.Commentator);
 
         return RegisterResult.Success();
+    }
+
+    /// <summary>
+    ///     Runs one password-hash verification against <see cref="_dummyPasswordHash" /> and discards the
+    ///     result, matching the cost of checking a real user's password.
+    /// </summary>
+    /// <param name="password">The password supplied in the login request.</param>
+    private void VerifyAgainstDummyHash(string password)
+    {
+        var hasher = userManager.PasswordHasher;
+        // A concurrent first call may compute the hash twice; either value is equally valid.
+        _dummyPasswordHash ??= hasher.HashPassword(DummyUser, Guid.NewGuid().ToString());
+        hasher.VerifyHashedPassword(DummyUser, _dummyPasswordHash, password);
     }
 }

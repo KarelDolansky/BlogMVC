@@ -8,7 +8,10 @@ public enum LoginFailureReason
     /// <summary>The email doesn't exist, or the password is wrong.</summary>
     InvalidCredentials,
 
-    /// <summary>The account is temporarily locked out due to too many failed attempts.</summary>
+    /// <summary>
+    ///     The account is temporarily locked out due to too many failed attempts. Not exposed to clients:
+    ///     <c>AuthController</c> returns the same 401 as for <see cref="InvalidCredentials" />.
+    /// </summary>
     LockedOut
 }
 

@@ -1,5 +1,6 @@
 using System.Reflection;
 using System.Text;
+using System.Threading.RateLimiting;
 using BlogMVC.Data;
 using BlogMVC.Helpers;
 using BlogMVC.Infrastructure.Interfaces;
@@ -10,6 +11,7 @@ using BlogMVC.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi;
 using MongoDB.Driver;
@@ -28,7 +30,15 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(options => options.Sign
     .AddEntityFrameworkStores<ApplicationDbContext>()
     .AddDefaultTokenProviders();
 
-builder.Services.AddAuthentication()
+// Fails at startup (not at the first login) when Jwt:Key is missing or too short for HMAC-SHA256.
+var jwtKey = builder.Configuration.GetRequiredJwtKey();
+
+// JWT is the default so a plain [Authorize] authenticates with the bearer token, not Identity's cookie scheme.
+builder.Services.AddAuthentication(options =>
+    {
+        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    })
     .AddJwtBearer(options =>
     {
         options.TokenValidationParameters = new TokenValidationParameters
@@ -39,8 +49,7 @@ builder.Services.AddAuthentication()
             ValidateIssuerSigningKey = true,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!))
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
         };
     });
 
@@ -104,6 +113,30 @@ builder.Services.AddCors(options =>
     });
 });
 
+// --- Rate limiting (brute-force / mass-registration protection on api/auth) ---
+builder.Services.AddOptions<AuthRateLimitSettings>()
+    .Bind(builder.Configuration.GetSection("RateLimiting:Auth"))
+    .Validate(s => s.PermitLimit > 0 && s.WindowSeconds > 0,
+        "RateLimiting:Auth:PermitLimit and RateLimiting:Auth:WindowSeconds must be positive.")
+    .ValidateOnStart();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    // Partitioned by client IP; behind a reverse proxy this needs UseForwardedHeaders, or all clients share one limit.
+    options.AddPolicy(RateLimitPolicies.Auth, httpContext =>
+    {
+        var settings = httpContext.RequestServices.GetRequiredService<IOptions<AuthRateLimitSettings>>().Value;
+        return RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = settings.PermitLimit,
+                Window = TimeSpan.FromSeconds(settings.WindowSeconds),
+                QueueLimit = 0
+            });
+    });
+});
+
 // --- MongoDB (blog post storage) ---
 builder.Services.Configure<MongoDbSettings>(
     builder.Configuration.GetSection("MongoDb"));
@@ -145,6 +178,8 @@ else
 
 app.UseRouting();
 app.UseCors(frontendCorsPolicy);
+app.UseRateLimiter();
+app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
 
