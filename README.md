@@ -27,7 +27,8 @@ dotnet run --project BlogMVC/BlogMVC.csproj
 
 Before running, provide `Jwt:Key` (and optionally `Jwt:Issuer`/`Jwt:Audience`) through your
 configuration mechanism of choice (environment variables, user-secrets, Docker/Kubernetes
-secrets, ...) — these values are intentionally not committed in `appsettings.json`.
+secrets, ...) — these values are intentionally not committed in `appsettings.json`. `Jwt:Key` must be at
+least 32 bytes (UTF-8), as HMAC-SHA256 requires; the app refuses to start with a missing or shorter key.
 
 `docker compose up -d` builds and runs the full stack — the `blogmvc` API container alongside MongoDB —
 not just MongoDB, so it also needs `Jwt:Key`. Copy `.env.example` to `.env` and set `JWT_KEY` there; Compose
@@ -40,7 +41,10 @@ both survive a `docker compose down`/`up` cycle.
 1. `POST api/auth/register` with `{ "email": "...", "password": "..." }` to create an Identity
    account (assigned the Commentator role; there is no email confirmation or admin approval step).
 2. `POST api/auth/login` with `{ "email": "...", "password": "..." }` for that account.
-   Returns `{ "token": "..." }`.
+   Returns `{ "token": "..." }`. A wrong password, an unknown email and a locked-out account all return
+   the same 401 response, so the endpoint doesn't reveal which emails are registered. Both `api/auth`
+   endpoints are rate-limited per client IP (10 requests per 60 seconds by default, configurable under
+   `RateLimiting:Auth`); excess requests get 429 Too Many Requests.
 3. Send that token as `Authorization: Bearer {token}` on the write endpoints of `api/blog`. Reading
    posts (GET) does not require a token. Creating a post (POST) requires the Administrator, Editor or
    Author role; bulk creation (POST bulk) requires Administrator or Editor — a Commentator token gets

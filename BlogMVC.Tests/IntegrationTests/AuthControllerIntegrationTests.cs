@@ -7,6 +7,7 @@ using BlogMVC.Data;
 using BlogMVC.Tests.Helpers;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace BlogMVC.Tests.IntegrationTests;
@@ -276,5 +277,74 @@ public class AuthControllerIntegrationTests(WebApplicationFactory<Program> facto
         using var scope = Factory.Services.CreateScope();
         var userManager = scope.ServiceProvider.GetRequiredService<UserManager<IdentityUser>>();
         Assert.Null(await userManager.FindByEmailAsync(email));
+    }
+
+    // ---------- Rate limiting ----------
+
+    /// <summary>Builds a client for a host whose auth rate limit allows only <paramref name="permitLimit" /> requests.</summary>
+    /// <param name="permitLimit">Requests allowed per window before the limiter returns 429.</param>
+    /// <returns>An unauthenticated client against the reconfigured host.</returns>
+    private HttpClient CreateClientWithAuthRateLimit(int permitLimit)
+    {
+        return Factory.WithWebHostBuilder(builder => builder.ConfigureAppConfiguration((_, config) =>
+                config.AddInMemoryCollection(new Dictionary<string, string?>
+                {
+                    ["RateLimiting:Auth:PermitLimit"] = permitLimit.ToString()
+                })))
+            .CreateClient();
+    }
+
+    /// <summary>Verifies that Login beyond the configured limit returns 429 instead of processing the request.</summary>
+    [Fact]
+    public async Task Login_WhenRateLimitExceeded_ReturnsTooManyRequests()
+    {
+        // Arrange
+        var client = CreateClientWithAuthRateLimit(2);
+        var loginDto = new LoginDtoFactory().Build();
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await client.PostAsJsonAsync("/api/auth/login", loginDto)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized,
+            (await client.PostAsJsonAsync("/api/auth/login", loginDto)).StatusCode);
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/auth/login", loginDto);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
+    }
+
+    /// <summary>Verifies that Register is covered by the same controller-level rate limit as Login.</summary>
+    [Fact]
+    public async Task Register_WhenRateLimitExceeded_ReturnsTooManyRequests()
+    {
+        // Arrange
+        var client = CreateClientWithAuthRateLimit(1);
+        var firstDto = new RegisterDtoFactory().WithEmail($"limit-1-{Guid.NewGuid():N}@example.com").Build();
+        var secondDto = new RegisterDtoFactory().WithEmail($"limit-2-{Guid.NewGuid():N}@example.com").Build();
+        Assert.Equal(HttpStatusCode.OK, (await client.PostAsJsonAsync("/api/auth/register", firstDto)).StatusCode);
+
+        // Act
+        var response = await client.PostAsJsonAsync("/api/auth/register", secondDto);
+
+        // Assert
+        Assert.Equal(HttpStatusCode.TooManyRequests, response.StatusCode);
+    }
+
+    /// <summary>Verifies that exhausting the auth rate limit does not limit endpoints outside api/auth.</summary>
+    [Fact]
+    public async Task GetPosts_AfterAuthRateLimitExceeded_IsNotRateLimited()
+    {
+        // Arrange
+        var client = CreateClientWithAuthRateLimit(1);
+        var loginDto = new LoginDtoFactory().Build();
+        await client.PostAsJsonAsync("/api/auth/login", loginDto);
+        Assert.Equal(HttpStatusCode.TooManyRequests,
+            (await client.PostAsJsonAsync("/api/auth/login", loginDto)).StatusCode);
+
+        // Act
+        var response = await client.GetAsync("/api/blog");
+
+        // Assert
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
     }
 }

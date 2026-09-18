@@ -24,7 +24,10 @@ flowchart LR
   MongoDB driver calls) → MongoDB. `Post.Id` is a MongoDB ObjectId stored as a string, validated with
   `MongoDbHelper.IsValidObjectId` before it ever reaches the repository.
 - **Auth**: `AuthController` → `UserManager`/`SignInManager` (ASP.NET Identity) → `ITokenProvider` issues
-  the JWT returned to the client.
+  the JWT returned to the client. `AuthController` is rate-limited per client IP (`RateLimitPolicies.Auth`,
+  configured by `RateLimiting:Auth`), and login returns the same 401 for an unknown email, a wrong password
+  and a locked-out account — `AuthService` also runs a password-hash verification for an unknown email, so
+  response timing doesn't reveal which emails exist.
 - **User administration**: `UsersController` → `IUserService`/`UserService` → `UserManager` (ASP.NET
   Identity) — replaces a user's assigned role.
 - **Role administration**: `RolesController` → `IRoleService`/`RoleService` → `RoleManager`/`UserManager`
@@ -50,20 +53,20 @@ BlogMVC/
 │   ├── Interfaces/        # IPostRepository, ITokenProvider, IDateTimeProvider
 │   ├── Providers/         # TokenProvider (JWT issuing), SystemDateTimeProvider
 │   └── Repositories/      # PostRepository — the only place that talks to the MongoDB driver
-├── Data/                  # EF Core ApplicationDbContext + Migrations (SQLite, Identity schema)
-├── Models/                # Domain model persisted to MongoDB (Post), Identity read-models (UserSummary, RoleSummary), and config (MongoDbSettings)
+├── Data/                  # EF Core ApplicationDbContext + Migrations (SQLite, Identity schema); Roles, Permissions and RateLimitPolicies constants
+├── Models/                # Domain model persisted to MongoDB (Post), Identity read-models (UserSummary, RoleSummary), and config (MongoDbSettings, AuthRateLimitSettings)
 ├── Dto/                   # Input models for requests (CreatePostDto, EditPostDto, LoginDto, RegisterDto, UpdateUserRoleDto, CreateRoleDto, UpdateRolePermissionsDto)
 ├── Responses/             # Output models returned to clients (PostResponse, TokenResponse, ErrorResponse, RegisterResponse, UserRoleResponse, RoleResponse, PermissionsResponse)
 ├── Results/                # Internal outcome types for service calls (LoginResult, RegisterResult, PostUpdateResult, UpdateUserRoleResult, CreateRoleResult, UpdateRolePermissionsResult, DeleteRoleResult)
-├── Helpers/                # Static helpers (MongoDbHelper, ClaimsPrincipalExtensions, RoleManagerExtensions, IdentityRoleSeederExtensions, DatabaseMigrationExtensions)
-└── Program.cs             # Composition root: DI registrations, middleware pipeline
+├── Helpers/                # Static helpers (MongoDbHelper, ClaimsPrincipalExtensions, RoleManagerExtensions, IdentityRoleSeederExtensions, DatabaseMigrationExtensions, JwtConfigurationExtensions)
+└── Program.cs             # Composition root: DI registrations, middleware pipeline (Routing → CORS → RateLimiter → Authentication → Authorization)
 
 BlogMVC.Tests/
 ├── Controllers/           # Unit tests (Moq) for controllers
 ├── Services/               # Unit tests for PostService, AuthService, UserService, RoleService
 ├── Providers/              # Unit tests for TokenProvider
-├── IntegrationTests/       # Full-stack tests via WebApplicationFactory<Program>, real MongoDB
-└── Helpers/                # Test data factories (PostFactory, CreatePostDtoFactory, ...) and RoleManagerExtensions unit tests
+├── IntegrationTests/       # Full-stack tests via WebApplicationFactory<Program>, real MongoDB (plus a test-only AuthenticationProbeController)
+└── Helpers/                # Test data factories (PostFactory, CreatePostDtoFactory, ...) and RoleManagerExtensions/JwtConfigurationExtensions unit tests
 ```
 
 ## Why the split into Dto / Responses / Results
@@ -91,7 +94,10 @@ Authorization checks a **permission claim**, not a role name. `Data/Roles.cs` na
 seeded-at-startup Identity roles; `Data/Permissions.cs` names the fixed set of permission claim values
 (`Posts.Create`, `Posts.CreateBulk`, `Posts.EditOwn`, `Posts.EditAny`, `Posts.DeleteOwn`, `Posts.DeleteAny`,
 `Users.ManageRoles`, `Roles.Manage`) — each wired to exactly one `[Authorize(Policy = ...)]` in
-`Program.cs`, so this list can't grow without a matching code change.
+`Program.cs`, so this list can't grow without a matching code change. JWT bearer is the default
+authentication and challenge scheme, so a plain `[Authorize]` authenticates with the bearer token rather
+than Identity's cookie. The signing key (`Jwt:Key`) is validated at startup by
+`Helpers/JwtConfigurationExtensions.GetRequiredJwtKey` — it must be at least 32 UTF-8 bytes.
 
 Which roles grant which of these permissions is **runtime-editable**, not a compile-time map: each role's
 permissions are stored as Identity role claims (`AspNetRoleClaims`, of claim type `Permissions.ClaimType`),

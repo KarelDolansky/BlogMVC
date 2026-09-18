@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
 using BlogMVC.Data;
+using BlogMVC.Helpers;
 using BlogMVC.Infrastructure.Interfaces;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
@@ -10,8 +11,8 @@ namespace BlogMVC.Infrastructure.Providers;
 
 /// <summary>
 ///     Default <see cref="ITokenProvider"/> implementation. Issues HMAC-SHA256 signed JWTs
-///     using the "Jwt:Key" / "Jwt:Issuer" / "Jwt:Audience" configuration values, which must
-///     be present in configuration (e.g. appsettings.json) or token creation will fail.
+///     using the "Jwt:Key" / "Jwt:Issuer" / "Jwt:Audience" configuration values; "Jwt:Key" must be
+///     at least 32 UTF-8 bytes (see <see cref="JwtConfigurationExtensions.GetRequiredJwtKey" />).
 /// </summary>
 public class TokenProvider(IConfiguration configuration, IDateTimeProvider dateTimeProvider) : ITokenProvider
 {
@@ -35,7 +36,7 @@ public class TokenProvider(IConfiguration configuration, IDateTimeProvider dateT
         claims.AddRange(roles.Select(r => new Claim(ClaimTypes.Role, r)));
         claims.AddRange(permissions.Select(p => new Claim(Permissions.ClaimType, p)));
 
-        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration["Jwt:Key"]!));
+        var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(configuration.GetRequiredJwtKey()));
         var credentials = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
 
         var token = new JwtSecurityToken(

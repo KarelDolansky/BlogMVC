@@ -51,9 +51,12 @@ public class AuthControllerTests
         Assert.Equal("Invalid email or password", result.Value);
     }
 
-    /// <summary>Verifies that Login when the account is locked out returns Unauthorized with the lockout message.</summary>
+    /// <summary>
+    ///     Verifies that Login when the account is locked out returns Unauthorized with the same message as
+    ///     invalid credentials, so the response doesn't reveal that the account exists.
+    /// </summary>
     [Fact]
-    public async Task Login_WithLockedOutAccount_ReturnsUnauthorized()
+    public async Task Login_WithLockedOutAccount_ReturnsSameMessageAsInvalidCredentials()
     {
         // Arrange
         var loginDto = new LoginDtoFactory().Build();
@@ -65,7 +68,7 @@ public class AuthControllerTests
 
         // Assert
         var result = Assert.IsType<UnauthorizedObjectResult>(response.Result);
-        Assert.Equal("Account is temporarily locked out", result.Value);
+        Assert.Equal("Invalid email or password", result.Value);
     }
 
     /// <summary>Verifies that Login with valid credentials returns Ok with the JWT token from the service.</summary>

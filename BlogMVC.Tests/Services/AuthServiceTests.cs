@@ -38,6 +38,9 @@ public class AuthServiceTests
         UserName = "test@example.com"
     };
 
+    /// <summary>Mocked <see cref="IPasswordHasher{TUser}" /> exposed through <see cref="_userManagerMock" />.</summary>
+    private readonly Mock<IPasswordHasher<IdentityUser>> _passwordHasherMock = new();
+
     /// <summary>
     ///     Mocked <see cref="RoleManager{TRole}" /> passed to <see cref="_authService" />; unconfigured, so
     ///     role→permission lookups resolve to no permissions unless a test sets one up.
@@ -56,7 +59,7 @@ public class AuthServiceTests
     /// <summary>Builds <see cref="_authService" /> with fresh mocks for each test.</summary>
     public AuthServiceTests()
     {
-        _userManagerMock = CreateUserManagerMock();
+        _userManagerMock = CreateUserManagerMock(_passwordHasherMock.Object);
         _signInManagerMock = CreateSignInManagerMock(_userManagerMock.Object);
         _roleManagerMock = CreateRoleManagerMock();
         _tokenProviderMock = new Mock<ITokenProvider>();
@@ -69,12 +72,13 @@ public class AuthServiceTests
     }
 
     /// <summary>Builds a mocked <see cref="UserManager{TUser}" /> (it has no parameterless constructor).</summary>
-    /// <returns>A mock with a mocked <see cref="IUserStore{TUser}" /> and null dependencies otherwise.</returns>
-    private static Mock<UserManager<IdentityUser>> CreateUserManagerMock()
+    /// <param name="passwordHasher">Hasher exposed as <see cref="UserManager{TUser}.PasswordHasher" />.</param>
+    /// <returns>A mock with a mocked <see cref="IUserStore{TUser}" />, the given hasher, and null dependencies otherwise.</returns>
+    private static Mock<UserManager<IdentityUser>> CreateUserManagerMock(IPasswordHasher<IdentityUser> passwordHasher)
     {
         var store = new Mock<IUserStore<IdentityUser>>();
-        return new Mock<UserManager<IdentityUser>>(store.Object, null!, null!, null!, null!, null!, null!, null!,
-            null!);
+        return new Mock<UserManager<IdentityUser>>(store.Object, null!, passwordHasher, null!, null!, null!, null!,
+            null!, null!);
     }
 
     /// <summary>Builds a mocked <see cref="RoleManager{TRole}" /> (it has no parameterless constructor).</summary>
@@ -129,6 +133,26 @@ public class AuthServiceTests
         _signInManagerMock.Verify(
             s => s.CheckPasswordSignInAsync(It.IsAny<IdentityUser>(), It.IsAny<string>(), It.IsAny<bool>()),
             Times.Never);
+    }
+
+    /// <summary>
+    ///     Verifies that LoginAsync with an unknown email still runs one password-hash verification, so the
+    ///     response time doesn't reveal whether the email exists.
+    /// </summary>
+    [Fact]
+    public async Task LoginAsync_WithNonExistingEmail_StillVerifiesPasswordHash()
+    {
+        // Arrange
+        var loginDto = new LoginDtoFactory().WithEmail(_defaultEmail).WithPassword(_defaultPassword).Build();
+        _userManagerMock.Setup(u => u.FindByEmailAsync(_defaultEmail)).ReturnsAsync((IdentityUser?)null);
+
+        // Act
+        await _authService.LoginAsync(loginDto);
+
+        // Assert
+        _passwordHasherMock.Verify(
+            h => h.VerifyHashedPassword(It.IsAny<IdentityUser>(), It.IsAny<string>(), _defaultPassword),
+            Times.Once);
     }
 
     /// <summary>Verifies that LoginAsync with a wrong password fails with InvalidCredentials.</summary>
