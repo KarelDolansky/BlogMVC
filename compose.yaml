@@ -7,8 +7,8 @@ services:
     ports:
       - "5125:8080"
     environment:
-      - ASPNETCORE_ENVIRONMENT=Development
-      - MongoDb__ConnectionString=mongodb://mongo:27017
+      - ASPNETCORE_ENVIRONMENT=${ASPNETCORE_ENVIRONMENT:-Production}
+      - MongoDb__ConnectionString=mongodb://${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME in a .env file or your shell environment}:${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in a .env file or your shell environment}@mongo:27017/?authSource=admin
       - Jwt__Key=${JWT_KEY:?Set JWT_KEY in a .env file or your shell environment}
       - Jwt__Issuer=${JWT_ISSUER:-BlogMVC}
       - Jwt__Audience=${JWT_AUDIENCE:-BlogMVC}
@@ -22,8 +22,11 @@ services:
   mongo:
     image: mongo:8
     restart: unless-stopped
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_ROOT_USERNAME:?Set MONGO_ROOT_USERNAME in a .env file or your shell environment}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASSWORD:?Set MONGO_ROOT_PASSWORD in a .env file or your shell environment}
     ports:
-      - "27017:27017"
+      - "127.0.0.1:27017:27017"
     volumes:
       - mongo_data:/data/db:z
     healthcheck:
