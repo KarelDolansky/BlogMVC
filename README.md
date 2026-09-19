@@ -31,10 +31,36 @@ secrets, ...) — these values are intentionally not committed in `appsettings.j
 least 32 bytes (UTF-8), as HMAC-SHA256 requires; the app refuses to start with a missing or shorter key.
 
 `docker compose up -d` builds and runs the full stack — the `blogmvc` API container alongside MongoDB —
-not just MongoDB, so it also needs `Jwt:Key`. Copy `.env.example` to `.env` and set `JWT_KEY` there; Compose
-reads it automatically (`.env` is gitignored, so the real value never gets committed). The containerized
+not just MongoDB, so it also needs `Jwt:Key`. Copy `.env.example` to `.env` and set `JWT_KEY`,
+`MONGO_ROOT_USERNAME` and `MONGO_ROOT_PASSWORD` there; Compose reads it automatically (`.env` is gitignored,
+so the real values never get committed) and refuses to start if any of them is missing. The password is
+embedded in a connection URI, so use a URL-safe value (e.g. `openssl rand -hex 32`). The containerized
 app's Identity data (SQLite) persists in a named `sqlite_data` volume, same as `mongo_data` does for posts —
 both survive a `docker compose down`/`up` cycle.
+
+The `blogmvc` container runs in the `Production` environment by default (no Swagger UI, HSTS and the
+production exception handler enabled). Set `ASPNETCORE_ENVIRONMENT=Development` in `.env` to get Swagger
+UI inside the container during local development.
+
+MongoDB requires authentication and its port is published on `127.0.0.1` only, so it is not reachable from
+other machines. `dotnet run` and `dotnet test` against the Compose MongoDB therefore need the credentials —
+override the connection string with an environment variable or user-secrets:
+
+```bash
+export MongoDb__ConnectionString="mongodb://<user>:<password>@localhost:27017/?authSource=admin"
+dotnet run --project BlogMVC/BlogMVC.csproj
+dotnet test BlogMVC.sln
+```
+
+**Upgrading an existing setup:** the MongoDB image creates the root user only when its data directory is
+empty. An existing `mongo_data` volume created before authentication was enabled has no user, so the app
+cannot connect. Either recreate the volume with `docker compose down -v` (this deletes all posts), or create
+the user once inside the container:
+
+```bash
+docker compose exec mongo mongosh admin --eval \
+  'db.createUser({ user: "<user>", pwd: "<password>", roles: ["root"] })'
+```
 
 ## REST API Authentication
 
